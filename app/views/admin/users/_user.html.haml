@@ -1,0 +1,14 @@
+%tr
+  %th= user.name
+  %th= user.email
+  %th
+    - if user.approved
+      = semantic_form_for user, url: admin_user_path(user) do |f|
+        = f.input :approved, as: :hidden, input_html: {value: false}
+        = f.action :submit, label: "De-activate"
+        = link_to "delete", admin_user_path(user), class: "btn btn-danger", data: {confirm: "Are you sure you want delete this user and all his / her data? This action CANNOT be reverted"}, method: :delete
+    - else
+      = semantic_form_for user, url: admin_user_path(user) do |f|
+        = f.input :approved, as: :hidden, input_html: {value: true}
+        = f.action :submit, label: "Approve", button_html: {class: "btn btn-priamry"}
+        = link_to "delete", admin_user_path(user), class: "btn btn-danger", data: {confirm: "Are you sure you want delete this user and all his / her data? This action CANNOT be reverted"}, method: :delete

@@ -6,7 +6,6 @@ MyMedLabsCallCenter::Application.routes.draw do
     resources :users
   end
   root to: "home#index"
-  resources :connects, only: :index do
-    post :voice, on: :collection
-  end
+  resources :connects, only: :index
+  post '/voice' => 'connects#voice', as: :voice
 end

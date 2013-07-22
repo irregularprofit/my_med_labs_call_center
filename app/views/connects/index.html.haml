@@ -1,0 +1,69 @@
+%button.call{onclick: "call();"}
+  Call
+
+%button.hangup{onclick: "hangup();"}
+  Hangup
+
+%input#number{name: "number", placeholder: "Enter a phone number to call", type: "text"}/
+
+#log Loading pigeons...
+
+%ul#people
+
+= jquery_init do
+  :javascript
+    <script type="text/javascript" charset="utf-8">
+
+      Twilio.Device.setup("<%= token %>", {debug: true});
+
+      Twilio.Device.ready(function (device) {
+        $("#log").text("Client '<%= client_name %>' is ready");
+      });
+
+      Twilio.Device.ready(function (device) {
+        $("#log").text("Ready");
+      });
+
+      Twilio.Device.error(function (error) {
+        $("#log").text("Error: " + error.message);
+      });
+
+      Twilio.Device.connect(function (conn) {
+        $("#log").text("Successfully established call");
+      });
+
+      Twilio.Device.disconnect(function (conn) {
+        $("#log").text("Call ended");
+      });
+
+      Twilio.Device.incoming(function (conn) {
+        $("#log").text("Incoming connection from " + conn.parameters.From);
+        // accept the incoming connection and start two-way audio
+        conn.accept();
+      });
+
+      Twilio.Device.presence(function (pres) {
+        if (pres.available) {
+          // create an item for the client that became available
+          $("<li>", {id: pres.from, text: pres.from}).click(function () {
+            $("#number").val(pres.from);
+            call();
+          }).prependTo("#people");
+        }
+        else {
+          // find the item by client name and remove it
+          $("#" + pres.from).remove();
+        }
+      });
+
+      function call() {
+        // get the phone number to connect the call to
+        params = {"PhoneNumber": $("#number").val()};
+        Twilio.Device.connect(params);
+      }
+
+      function hangup() {
+        Twilio.Device.disconnectAll();
+      }
+
+    </script>

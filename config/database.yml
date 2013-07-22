@@ -1,7 +1,7 @@
 defaults: &defaults
  adapter: postgresql
  database: my_med_labs_call_center_development
- username: tammam
+ username: jimmy
  password:
  encoding: unicode
  pool: 5

@@ -1,12 +1,9 @@
 class ConnectsController < ApplicationController
   layout "connect"
   def index
-    default_client = "jenny"
-
     client_name = params[:client]
-    if client_name.nil?
-      client_name = default_client
-    end
+    client_name = current_user.name if client_name.nil?
+
     # Find these values at twilio.com/user/account
     account_sid = 'ACc9f94230884add84b3a5fa0d7c6df08a'
     auth_token = '827e6c207363a1b7b8f1c5861ecc8fe9'
@@ -15,7 +12,7 @@ class ConnectsController < ApplicationController
     capability.allow_client_outgoing "APeabd53438dea1a6b79f651bd14c9c875"
     capability.allow_client_incoming client_name
     token = capability.generate
-    erb :index, locals: {token: token, client_name: client_name}
+    render :index, locals: {token: token, client_name: client_name}
   end
 
   def voice

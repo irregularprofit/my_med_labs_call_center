@@ -12,7 +12,7 @@
 
 :javascript
   var callLength;
-  Twilio.Device.setup("#{@token}", {debug: true});
+  Twilio.Device.setup("#{token}", {debug: true});
 
   Twilio.Device.ready(function (device) {
     $("#log").text("Client is ready");
@@ -59,7 +59,8 @@
   function call() {
     // get the phone number to connect the call to
     params = {"PhoneNumber": $("#number").val()};
-    Twilio.Device.connect(params);
+    // Twilio.Device.connect(params);
+    window.location = "#{queue_url}";
   }
 
   function hangup() {

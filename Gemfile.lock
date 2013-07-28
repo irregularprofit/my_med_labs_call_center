@@ -68,6 +68,7 @@ GEM
       coffee-script-source
       execjs
     coffee-script-source (1.6.3)
+    colored (1.2)
     commonjs (0.2.6)
     daemons (1.1.9)
     devise (3.0.0)
@@ -203,6 +204,7 @@ DEPENDENCIES
   cancan (~> 1.6.10)
   capistrano (~> 2.13.5)
   coffee-rails (~> 4.0.0)
+  colored
   devise (~> 3.0.0)
   foreigner
   formtastic!

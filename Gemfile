@@ -24,6 +24,7 @@ gem "formtastic-bootstrap", git: "https://github.com/mjbellantoni/formtastic-boo
 gem "devise", "~> 3.0.0"
 
 gem "haml"
+gem "colored"
 
 gem "cancan", "~> 1.6.10"
 

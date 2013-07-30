@@ -65,58 +65,23 @@ class ConnectsController < ApplicationController
 
   def queue
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
-    
-    capability = Twilio::Util::Capability.new ACCOUNT_SID, AUTH_TOKEN
-    capability.allow_client_outgoing "APeabd53438dea1a6b79f651bd14c9c875"
-    capability.allow_client_incoming User.first.name
-    token = capability.generate
-    
+
     sid = @client.account.queues.list.first.sid
 
-    # Get an object from its sid. If you do not have a sid,
-    # check out the list resource examples on this page
     @member = @client.account.queues.get(sid).members.get("Front")
-    @member.update(url: "http://my-med-labs-call-center.herokuapp.com/queue_post",
-        method: "POST")
-
-    render nothing: true, status: 200, content_type: 'text/html'
-  end
-
-  def queue_post
-    response = Twilio::TwiML::Response.new do |r|
-      r.Dial do |d|
-        d.Queue url: 'http://my-med-labs-call-center.herokuapp.com/about_to_connect.xml', method: "GET" do |p|
-        end
-      end
-    end
-    
-    #FIXME: this is stupid but I can't figure out how to store nouns
-    response_text = response.text
-    puts response_text.red
-    response_text = response_text.gsub("</Queue>", "support</Queue>")
-
-    puts response_text.red
-
-    render text: response_text
-  end
-
-  def about_to_connect
-    response = Twilio::TwiML::Response.new do |r|
-      r.Say "You are about to be connected to an agent."
-    end
-
-    render text: response.text
+    @member.update(
+      url: "http://my-med-labs-call-center.herokuapp.com/dequeue?agent=#{current_user.name}",
+      method: "POST"
+    )
   end
 
   def dequeue
-    puts 'incoming call from queue'
-    puts params.inspect.red
     from = params[:From]
-    number = params[:Called]
+    agent = params[:agent]
 
     response = Twilio::TwiML::Response.new do |r|
       r.Dial callerId: from do |d|
-        d.Number(CGI::escapeHTML number)
+        d.Client agent
       end
     end
 

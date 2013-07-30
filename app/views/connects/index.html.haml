@@ -1,15 +1,14 @@
 %button.call{onclick: "call();"}
   Call
 
-%button.call{onclick: "pickup();"}
-  Pickup
-
 %button.hangup{onclick: "hangup();"}
   Hangup
 
 %input#number{name: "number", placeholder: "Enter a phone number to call", type: "text"}/
 
 #log Loading pigeons...
+
+%div.agent_name= "Agent name: #{current_user.name}"
 
 %ul#people
 
@@ -42,7 +41,13 @@
   Twilio.Device.incoming(function (conn) {
     $("#log").text("Incoming connection from " + conn.parameters.From);
     // accept the incoming connection and start two-way audio
-    conn.accept();
+
+    var r = confirm("Incoming call. Accept?");
+    if (r == true) {
+      conn.accept();  
+    } else {
+      conn.disconnect(); 
+    }    
   });
 
   Twilio.Device.presence(function (pres) {
@@ -60,15 +65,8 @@
   });
 
   function call() {
-    // get the phone number to connect the call to
-    params = {"PhoneNumber": $("#number").val()};
-    // Twilio.Device.connect(params);
-    window.location = "#{queue_url}";
-  }
+    $.post("http://my-med-labs-call-center.herokuapp.com/queue", function(data) {
 
-  function pickup() {
-    $.post('http://my-med-labs-call-center.herokuapp.com/queue_post', function(data) {
-      
     });
   }
 

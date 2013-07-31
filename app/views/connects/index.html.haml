@@ -1,5 +1,8 @@
 %button.call{onclick: "call();"}
-  Call
+  Call Queue
+
+%button.hangup{onclick: "check_rooms();"}
+  check room
 
 %button.hangup{onclick: "hangup();"}
   Hangup
@@ -42,6 +45,9 @@
     $("#log").text("Incoming connection from " + conn.parameters.From);
     // accept the incoming connection and start two-way audio
 
+    console.log(conn);
+    console.log(conn.parameters);
+
     var r = confirm("Incoming call. Accept?");
     if (r == true) {
       conn.accept();  
@@ -55,7 +61,7 @@
       // create an item for the client that became available
       $("<li>", {id: pres.from, text: pres.from}).click(function () {
         $("#number").val(pres.from);
-        call();
+        conference(pres.from);
       }).prependTo("#people");
     }
     else {
@@ -63,6 +69,18 @@
       $("#" + pres.from).remove();
     }
   });
+
+  function conference(name) {
+    $.post("http://my-med-labs-call-center.herokuapp.com/init_conference?agent=" + name, function(data) {
+
+    });
+  }
+
+  function check_rooms() {
+    $.post("http://my-med-labs-call-center.herokuapp.com/check_rooms", function(data) {
+
+    });
+  }
 
   function call() {
     $.post("http://my-med-labs-call-center.herokuapp.com/queue", function(data) {

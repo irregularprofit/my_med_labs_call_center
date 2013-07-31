@@ -4,6 +4,7 @@ class ConnectsController < ApplicationController
   before_filter :check_logged_in_user, only: :index
   skip_before_filter :verify_authenticity_token
 
+  #real
   CALLER_ID = "+14086457436"
   ACCOUNT_SID = 'ACc9f94230884add84b3a5fa0d7c6df08a'
   AUTH_TOKEN = '827e6c207363a1b7b8f1c5861ecc8fe9'
@@ -86,6 +87,85 @@ class ConnectsController < ApplicationController
     end
 
     render text: response.text
+  end
+
+  def init_conference
+    invited_agent = params[:agent]
+    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+
+    call = @client.account.calls.create(
+      url: "http://my-med-labs-call-center.herokuapp.com/conference",
+      to: "client:#{invited_agent}",
+      from: "client:#{current_user.name}"
+    )
+    call = @client.account.calls.create(
+      url: "http://my-med-labs-call-center.herokuapp.com/conference",
+      to: "client:#{current_user.name}",
+      from: "client:#{current_user.name}"
+    )
+
+    @client.account.conferences.list({
+      status: "in-progress"}).each do |conference|
+
+      puts conference.sid.inspect.red
+      puts conference.status.inspect.red
+      puts conference.friendly_name.inspect.red
+    end
+
+    @client.account.conferences.list({
+      status: "init"}).each do |conference|
+
+      puts conference.sid.inspect.blue
+      puts conference.status.inspect.blue
+      puts conference.friendly_name.inspect.blue
+    end
+
+    # conference_sid = @client.account.conferences.list({status: "init"}).sid
+    # @client.account.conferences.get(conference_sid).participants.list.each do |participant|
+    #   puts participant.inspect.blue
+    # end
+  end
+
+  def conference
+    response = Twilio::TwiML::Response.new do |r|
+      r.Dial do |d|
+        d.Conference beep: false, waitUrl: '', startConferenceOnEnter: true, endConferenceOnExit: true do |d|
+
+        end
+      end
+    end
+
+    #FIXME: this is stupid but I can't figure out how to store nouns
+    response_text = response.text
+    response_text = response_text.gsub("</Conference>", "simple_conference_room</Conference>")
+
+    render text: response_text
+  end
+
+  def check_rooms
+    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+
+    @client.account.conferences.list({
+      status: "in-progress"}).each do |conference|
+
+      puts conference.sid.inspect.red
+      puts conference.status.inspect.red
+      puts conference.friendly_name.inspect.red
+    end
+
+    @client.account.conferences.list({
+      status: "init"}).each do |conference|
+
+      puts conference.sid.inspect.blue
+      puts conference.status.inspect.blue
+      puts conference.friendly_name.inspect.blue
+    end
+
+    conference_sid = @client.account.conferences.list({status: "in-progress"}).first.sid
+    @client.account.conferences.get(conference_sid).participants.list.each do |participant|
+      puts participant.inspect.blue
+    end
+
   end
 
   private

@@ -73,7 +73,9 @@
 
   function conference(name) {
     $.post("http://my-med-labs-call-center.herokuapp.com/init_conference?agent=" + name, function(data) {
+    });
 
+    $.post("http://my-med-labs-call-center.herokuapp.com/conference", function(data) {
     });
   }
 

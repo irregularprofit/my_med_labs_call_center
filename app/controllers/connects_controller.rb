@@ -99,11 +99,11 @@ class ConnectsController < ApplicationController
       to: "client:#{invited_agent}",
       from: "client:#{current_user.name}"
     )
-    call = @client.account.calls.create(
-      url: "http://my-med-labs-call-center.herokuapp.com/conference",
-      to: "client:#{current_user.name}",
-      from: "client:#{current_user.name}"
-    )
+    # call = @client.account.calls.create(
+    #   url: "http://my-med-labs-call-center.herokuapp.com/conference",
+    #   to: "client:#{current_user.name}",
+    #   from: "client:#{current_user.name}"
+    # )
   end
 
   def conference

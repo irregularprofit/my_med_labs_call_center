@@ -43,7 +43,7 @@ class ConnectsController < ApplicationController
 
   def enqueue
     response = Twilio::TwiML::Response.new do |r|
-      r.Enqueue action: '/voice', waitUrl: '/wait_url.xml', waitUrlMethod: 'GET' do |d|
+      r.Enqueue waitUrl: '/wait_url.xml', waitUrlMethod: 'GET' do |d|
 
       end
     end
@@ -61,32 +61,33 @@ class ConnectsController < ApplicationController
       r.Play 'https://www.dropbox.com/s/z97h9xl4eu47v6d/banana.mp3?dl=1'
     end
 
+    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+
+    User.all.each do |user|
+      @client.account.calls.create(
+        url: "http://my-med-labs-call-center.herokuapp.com/queue?agent=#{user.name}",
+        to: "client:#{user.name}",
+        from: "client:#{user.name}"
+      )
+    end
+
     render text: response.text
   end
 
   def queue
-    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
-
-    sid = @client.account.queues.list.first.sid
-
-    @member = @client.account.queues.get(sid).members.get("Front")
-    @member.update(
-      url: "http://my-med-labs-call-center.herokuapp.com/dequeue?agent=#{current_user.name}",
-      method: "POST"
-    )
-  end
-
-  def dequeue
-    from = params[:From]
-    agent = params[:agent]
-
     response = Twilio::TwiML::Response.new do |r|
-      r.Dial callerId: from do |d|
-        d.Client agent
+      r.Dial do |d|
+        d.Queue do |q|
+
+        end
       end
     end
 
-    render text: response.text
+    #FIXME: this is stupid but I can't figure out how to store nouns
+    response_text = response.text
+    response_text = response_text.gsub("</Queue>", "support</Queue>")
+
+    render text: response_text
   end
 
   def init_conference
@@ -103,27 +104,6 @@ class ConnectsController < ApplicationController
       to: "client:#{current_user.name}",
       from: "client:#{current_user.name}"
     )
-
-    @client.account.conferences.list({
-      status: "in-progress"}).each do |conference|
-
-      puts conference.sid.inspect.red
-      puts conference.status.inspect.red
-      puts conference.friendly_name.inspect.red
-    end
-
-    @client.account.conferences.list({
-      status: "init"}).each do |conference|
-
-      puts conference.sid.inspect.blue
-      puts conference.status.inspect.blue
-      puts conference.friendly_name.inspect.blue
-    end
-
-    # conference_sid = @client.account.conferences.list({status: "init"}).sid
-    # @client.account.conferences.get(conference_sid).participants.list.each do |participant|
-    #   puts participant.inspect.blue
-    # end
   end
 
   def conference

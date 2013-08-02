@@ -4,13 +4,17 @@
 %button.hangup{onclick: "hangup();"}
   Hangup
 
-%input#number{name: "number", placeholder: "Enter a phone number to call", type: "text"}/
+%button.hangup{onclick: "check_logs();"}
+  Logs
 
 #log Loading pigeons...
 
 %div.agent_name= "Agent name: #{current_user.name}"
 
 %ul#people
+
+#dialog-confirm{title: "Accept the call?"}
+  %p
 
 :javascript
   var callLength;
@@ -31,47 +35,79 @@
   });
 
   Twilio.Device.disconnect(function (conn) {
-    var difference = ($.now() - callLength) / 1000;
-    currentCalller = "";
-    $("#log").text("Call ended. Call lasted " + difference + " seconds");
+    show_call_end_status();
+  });
+
+  Twilio.Device.cancel(function (conn) {
+    show_call_end_status();
   });
 
   Twilio.Device.incoming(function (conn) {
-    $("#log").text("Incoming connection from " + conn.parameters.From);
+    var message = "";
 
-    var r = confirm("Incoming call. Accept?");
-    if (r == true) {
-      currentCalller = conn.parameters.From;
-      conn.accept();  
-    } else {
-      conn.disconnect(); 
-    }    
+    if (conn.parameters.From.match(/^client:/) == null) {
+      message = "Incoming user call from " + conn.parameters.From + ". Pickup?";
+    } else if (conn.parameters.From != conn.parameters.To) {
+      message = "Incoming conference request from " + conn.parameters.From + " accept?";
+    }
+
+    $("#dialog-confirm").find('p').html(message);
+
+    $("#dialog-confirm").dialog({
+      resizable: true,
+      modal: true,
+      buttons: {
+        "Accept": function() {
+          if (conn.parameters.From.match(/^client:/) == null) {
+            currentCalller = conn.parameters.From;
+          }
+          conn.accept();
+          $(this).dialog("close");
+        },
+        Cancel: function() {
+          conn.disconnect();
+          $(this).dialog("close");
+        }
+      }
+    });
   });
 
   Twilio.Device.presence(function (pres) {
     if (pres.available) {
-      // create an item for the client that became available
-      $("<li>", {id: pres.from, text: pres.from}).click(function () {
-        conference(pres.from, currentCalller);
-      }).prependTo("#people");
-    }
-    else {
-      // find the item by client name and remove it
+      if ($("ul#people").find("li#" + pres.from).size() == 0) {
+        $("<li>", {id: pres.from, text: pres.from}).click(function () {
+          conference(pres.from, currentCalller);
+        }).prependTo("#people");
+      }
+    } else {
       $("#" + pres.from).remove();
     }
   });
 
+  function show_call_end_status() {
+    $("#dialog-confirm").dialog("close");
+    var difference = ($.now() - callLength) / 1000;
+    currentCalller = "";
+
+    if (isNaN(difference)) {
+      var message = "Call ended";
+    } else {
+      var message = "Call ended. Call lasted " + difference + " seconds";
+    }
+
+    $("#log").text(message);
+  }
+
   function conference(name, number) {
     $.post("http://my-med-labs-call-center.herokuapp.com/init_conference", { agent: name, from: number } );
-
-    $.post("http://my-med-labs-call-center.herokuapp.com/conference", function(data) {
-    });
   }
 
   function check_rooms() {
-    $.post("http://my-med-labs-call-center.herokuapp.com/check_rooms", function(data) {
+    $.post("http://my-med-labs-call-center.herokuapp.com/check_rooms");
+  }
 
-    });
+  function check_logs() {
+    $.post("http://my-med-labs-call-center.herokuapp.com/check_logs");
   }
 
   function hangup() {

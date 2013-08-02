@@ -18,29 +18,6 @@ class ConnectsController < ApplicationController
     render :index, locals: {token: token, client_name: current_user.name}
   end
 
-  def voice
-    number = params[:PhoneNumber]
-
-    response = Twilio::TwiML::Response.new do |r|
-      # Should be your Twilio Number or a verified Caller ID
-      r.Dial callerId: CALLER_ID do |d|
-        # Test to see if the PhoneNumber is a number, or a Client ID. In
-        # this case, we detect a Client ID by the presence of non-numbers
-        # in the PhoneNumber parameter.
-        if number.nil?
-          #FIXME: Why can't I access current user
-          d.Client User.first.name
-        elsif /^[\d\+\-\(\) ]+$/.match(number)
-          d.Number(CGI::escapeHTML number)
-        else
-          d.Client number
-        end
-      end
-    end
-
-    render text: response.text
-  end
-
   def enqueue
     response = Twilio::TwiML::Response.new do |r|
       r.Enqueue waitUrl: '/wait_url.xml', waitUrlMethod: 'GET' do |d|
@@ -65,9 +42,9 @@ class ConnectsController < ApplicationController
 
     User.all.each do |user|
       @client.account.calls.create(
-        url: "http://my-med-labs-call-center.herokuapp.com/queue?agent=#{user.name}",
-        to: "client:#{user.name}",
-        from: "client:#{user.name}"
+        url: "http://my-med-labs-call-center.herokuapp.com/queue?agent_id=#{user.id}",
+        from: params[:From],
+        to: "client:#{user.name}"
       )
     end
 
@@ -75,41 +52,102 @@ class ConnectsController < ApplicationController
   end
 
   def queue
-    response = Twilio::TwiML::Response.new do |r|
-      r.Dial do |d|
-        d.Queue do |q|
+    agent_id = params[:agent_id]
+    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
 
+    if @client.account.queues.list.first.current_size == 0
+      response = Twilio::TwiML::Response.new do |r|
+        r.Say "The user call in queue has already been picked up."
+        r.Reject
+      end
+
+      response_text = response.text
+    else
+      response = Twilio::TwiML::Response.new do |r|
+        r.Dial do |d|
+          d.Queue url: "about_to_connect.xml" do |q|
+
+          end
         end
       end
+
+      User.where("id != ?", agent_id).all.each do |user|
+        ringing_call = @client.account.calls.list({
+                                                    status: "ringing",
+                                                    from: params[:Caller],
+                                                    to: "client:#{user.name}"
+        }).first
+        if ringing_call
+          ringing_call.update(status: "completed")
+        end
+      end
+
+      #FIXME: this is stupid but I can't figure out how to store nouns
+      response_text = response.text
+      response_text = response_text.gsub("</Queue>", "support</Queue>")
     end
 
-    #FIXME: this is stupid but I can't figure out how to store nouns
-    response_text = response.text
-    response_text = response_text.gsub("</Queue>", "support</Queue>")
-
     render text: response_text
+  end
+
+  def about_to_connect
+    response = Twilio::TwiML::Response.new do |r|
+      r.Say "Thank you for your patience. An agent is on line and will be connecting to your call now."
+    end
+
+    render text: response.text
   end
 
   def init_conference
     invited_agent = params[:agent]
     number = params[:from]
 
-    puts '!'*100
-    puts params.inspect
-
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
 
     call = @client.account.calls.create(
       url: "http://my-med-labs-call-center.herokuapp.com/conference",
-      to: "client:#{invited_agent}",
-      from: "client:#{current_user.name}"
+      from: "client:#{current_user.name}",
+      to: "client:#{invited_agent}"
     )
+
+    if number.present?
+      @client.account.calls.list({
+                                   status: "in-progress"
+      }).each do |current_call|
+        puts current_call.sid.red
+        puts current_call.from.red
+        puts current_call.to.red
+        puts current_call.direction.red
+      end
+
+      @client.account.calls.list({
+                                   from: number,
+                                   to: CALLER_ID,
+                                   status: "in-progress"
+      }).each do |current_call|
+        current_call.update(
+          url: "http://my-med-labs-call-center.herokuapp.com/conference?org=client:#{current_user.name}&dest=client:#{invited_agent}",
+          method: "POST"
+        )
+      end
+
+      call = @client.account.calls.create(
+        url: "http://my-med-labs-call-center.herokuapp.com/conference?org=client:#{current_user.name}&dest=client:#{invited_agent}",
+        from: "client:#{invited_agent}",
+        to: "client:#{current_user.name}"
+      )
+    end
+
+    render nothing: true
   end
 
   def conference
+    from_agent = params[:org] || params[:From]
+    to_agent = params[:dest] || params[:To]
+
     response = Twilio::TwiML::Response.new do |r|
       r.Dial do |d|
-        d.Conference beep: false, waitUrl: '', startConferenceOnEnter: true, endConferenceOnExit: true do |d|
+        d.Conference waitUrl: '', startConferenceOnEnter: true, endConferenceOnExit: true do |d|
 
         end
       end
@@ -117,16 +155,50 @@ class ConnectsController < ApplicationController
 
     #FIXME: this is stupid but I can't figure out how to store nouns
     response_text = response.text
-    response_text = response_text.gsub("</Conference>", "simple_conference_room</Conference>")
+    response_text = response_text.gsub("</Conference>", "#{from_agent}_conference_#{to_agent}</Conference>")
 
     render text: response_text
+  end
+
+  def check_logs
+    puts "completed".blue
+    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+    @client.account.calls.list({
+                                 to: "client:#{current_user.name}",
+                                 status: "completed",
+                                 :"start_time>" => Date.today.to_s,
+                                 :"start_time<" => Date.tomorrow.to_s
+    }).each do |call|
+      puts '-'*100
+      puts call.start_time
+      puts call.end_time
+      puts call.duration
+    end
+
+    puts "in-progress".red
+    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+    @client.account.calls.list({
+                                 :"start_time>" => Date.today.to_s,
+                                 :"start_time<" => Date.tomorrow.to_s
+    }).each do |call|
+      puts '-'*100
+      puts call.from
+      puts call.to
+      puts call.start_time
+      puts call.end_time
+      puts call.duration
+      puts call.status
+    end
+
+    render nothing: true
   end
 
   def check_rooms
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
 
     @client.account.conferences.list({
-      status: "in-progress"}).each do |conference|
+                                       status: "in-progress"
+    }).each do |conference|
 
       puts conference.sid.inspect.red
       puts conference.status.inspect.red
@@ -134,18 +206,29 @@ class ConnectsController < ApplicationController
     end
 
     @client.account.conferences.list({
-      status: "init"}).each do |conference|
+                                       status: "init"
+    }).each do |conference|
 
       puts conference.sid.inspect.blue
       puts conference.status.inspect.blue
       puts conference.friendly_name.inspect.blue
     end
 
-    conference_sid = @client.account.conferences.list({status: "in-progress"}).first.sid
-    @client.account.conferences.get(conference_sid).participants.list.each do |participant|
-      puts participant.inspect.blue
-    end
+    conference_room = @client.account.conferences.list({
+                                                         status: "in-progress"
+    }).first
 
+    if conference_room.present?
+      @client.account.conferences.get(conference_room.sid).participants.list.each do |participant|
+        puts participant.call_sid.blue
+        puts participant.conference_sid.blue
+        puts participant.start_conference_on_enter.inspect.blue
+        puts participant.end_conference_on_exit.inspect.blue
+        puts participant.uri.blue
+        puts '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^'.blue
+      end
+    end
+    render nothing: true
   end
 
   private

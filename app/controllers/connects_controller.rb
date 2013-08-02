@@ -92,6 +92,11 @@ class ConnectsController < ApplicationController
 
   def init_conference
     invited_agent = params[:agent]
+    number = params[:from]
+
+    puts '!'*100
+    puts params.inspect
+
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
 
     call = @client.account.calls.create(
@@ -99,11 +104,6 @@ class ConnectsController < ApplicationController
       to: "client:#{invited_agent}",
       from: "client:#{current_user.name}"
     )
-    # call = @client.account.calls.create(
-    #   url: "http://my-med-labs-call-center.herokuapp.com/conference",
-    #   to: "client:#{current_user.name}",
-    #   from: "client:#{current_user.name}"
-    # )
   end
 
   def conference

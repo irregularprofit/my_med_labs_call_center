@@ -1,8 +1,5 @@
-%button.call{onclick: "call();"}
-  Call Queue
-
 %button.hangup{onclick: "check_rooms();"}
-  check room
+  check
 
 %button.hangup{onclick: "hangup();"}
   Hangup
@@ -17,11 +14,8 @@
 
 :javascript
   var callLength;
+  var currentCalller;
   Twilio.Device.setup("#{token}", {debug: true});
-
-  Twilio.Device.ready(function (device) {
-    $("#log").text("Client is ready");
-  });
 
   Twilio.Device.ready(function (device) {
     $("#log").text("Ready");
@@ -38,19 +32,16 @@
 
   Twilio.Device.disconnect(function (conn) {
     var difference = ($.now() - callLength) / 1000;
+    currentCalller = "";
     $("#log").text("Call ended. Call lasted " + difference + " seconds");
   });
 
   Twilio.Device.incoming(function (conn) {
-    console.log('!!!!!!!!!!!!!!!!!!!');
     $("#log").text("Incoming connection from " + conn.parameters.From);
-    // accept the incoming connection and start two-way audio
-
-    console.log(conn);
-    console.log(conn.parameters);
 
     var r = confirm("Incoming call. Accept?");
     if (r == true) {
+      currentCalller = conn.parameters.From;
       conn.accept();  
     } else {
       conn.disconnect(); 
@@ -61,8 +52,7 @@
     if (pres.available) {
       // create an item for the client that became available
       $("<li>", {id: pres.from, text: pres.from}).click(function () {
-        $("#number").val(pres.from);
-        conference(pres.from);
+        conference(pres.from, currentCalller);
       }).prependTo("#people");
     }
     else {
@@ -71,9 +61,8 @@
     }
   });
 
-  function conference(name) {
-    $.post("http://my-med-labs-call-center.herokuapp.com/init_conference?agent=" + name, function(data) {
-    });
+  function conference(name, number) {
+    $.post("http://my-med-labs-call-center.herokuapp.com/init_conference", { agent: name, from: number } );
 
     $.post("http://my-med-labs-call-center.herokuapp.com/conference", function(data) {
     });
@@ -81,12 +70,6 @@
 
   function check_rooms() {
     $.post("http://my-med-labs-call-center.herokuapp.com/check_rooms", function(data) {
-
-    });
-  }
-
-  function call() {
-    $.post("http://my-med-labs-call-center.herokuapp.com/queue", function(data) {
 
     });
   }

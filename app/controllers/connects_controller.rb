@@ -111,21 +111,18 @@ class ConnectsController < ApplicationController
     )
 
     if number.present?
-      @client.account.calls.list({
-                                   status: "in-progress"
-      }).each do |current_call|
-        puts current_call.sid.red
-        puts current_call.from.red
-        puts current_call.to.red
-        puts current_call.direction.red
+      @client.account.calls.list({status: "in-progress"}).each do |call|
+        puts "Call #{call.status} from #{call.from} to #{call.to} as #{call.direction} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".red
       end
 
       @client.account.calls.list({
                                    from: number,
                                    to: CALLER_ID,
                                    status: "in-progress"
-      }).each do |current_call|
-        current_call.update(
+      }).each do |call|
+        puts "Call #{call.status} from #{call.from} to #{call.to} as #{call.direction} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".blue
+        puts "Redirect call now".blue
+        call.update(
           url: "http://my-med-labs-call-center.herokuapp.com/conference?org=client:#{current_user.name}&dest=client:#{invited_agent}",
           method: "POST"
         )
@@ -161,33 +158,13 @@ class ConnectsController < ApplicationController
   end
 
   def check_logs
-    puts "completed".blue
-    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
-    @client.account.calls.list({
-                                 to: "client:#{current_user.name}",
-                                 status: "completed",
-                                 :"start_time>" => Date.today.to_s,
-                                 :"start_time<" => Date.tomorrow.to_s
-    }).each do |call|
-      puts '-'*100
-      puts call.start_time
-      puts call.end_time
-      puts call.duration
-    end
-
-    puts "in-progress".red
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
     @client.account.calls.list({
                                  :"start_time>" => Date.today.to_s,
-                                 :"start_time<" => Date.tomorrow.to_s
+                                 :"start_time<" => Date.tomorrow.to_s,
+                                 to: "client:#{current_user.name}"
     }).each do |call|
-      puts '-'*100
-      puts call.from
-      puts call.to
-      puts call.start_time
-      puts call.end_time
-      puts call.duration
-      puts call.status
+      puts "Call #{call.status} from #{call.from} to #{call.to} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".red_on_yellow
     end
 
     render nothing: true
@@ -196,36 +173,19 @@ class ConnectsController < ApplicationController
   def check_rooms
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
 
-    @client.account.conferences.list({
-                                       status: "in-progress"
-    }).each do |conference|
-
-      puts conference.sid.inspect.red
-      puts conference.status.inspect.red
-      puts conference.friendly_name.inspect.red
+    @client.account.conferences.list({status: "in-progress"}).each do |conference|
+      puts "Conference #{conference.status} named #{conference.friendly_name}:#{conference.sid}".blue
     end
 
-    @client.account.conferences.list({
-                                       status: "init"
-    }).each do |conference|
-
-      puts conference.sid.inspect.blue
-      puts conference.status.inspect.blue
-      puts conference.friendly_name.inspect.blue
+    @client.account.conferences.list({status: "init"}).each do |conference|
+      puts "Conference #{conference.status} named #{conference.friendly_name}:#{conference.sid}".red
     end
 
-    conference_room = @client.account.conferences.list({
-                                                         status: "in-progress"
-    }).first
+    conference = @client.account.conferences.list({status: "in-progress"}).first
 
-    if conference_room.present?
-      @client.account.conferences.get(conference_room.sid).participants.list.each do |participant|
-        puts participant.call_sid.blue
-        puts participant.conference_sid.blue
-        puts participant.start_conference_on_enter.inspect.blue
-        puts participant.end_conference_on_exit.inspect.blue
-        puts participant.uri.blue
-        puts '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^'.blue
+    if conference.present?
+      conference.participants.list.each do |participant|
+        puts "Conference #{conference.status} named #{conference.friendly_name}:#{conference.sid} with participant #{participant.call_sid}".blue
       end
     end
     render nothing: true

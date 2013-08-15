@@ -4,11 +4,6 @@ class ConnectsController < ApplicationController
   before_filter :check_logged_in_user, only: :index
   skip_before_filter :verify_authenticity_token
 
-  #real
-  CALLER_ID = "+14086457436"
-  ACCOUNT_SID = 'ACc9f94230884add84b3a5fa0d7c6df08a'
-  AUTH_TOKEN = '827e6c207363a1b7b8f1c5861ecc8fe9'
-
   def index
     capability = Twilio::Util::Capability.new ACCOUNT_SID, AUTH_TOKEN
     # Create an application sid at twilio.com/user/account/apps and use it here

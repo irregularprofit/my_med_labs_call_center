@@ -7,21 +7,23 @@ class User < ActiveRecord::Base
 
   after_create :send_admin_mail
 
+  has_many :call_logs
+
   scope :active,    -> {where(approved: true)}
   scope :admin,     -> {where(is_admin: true)}
   scope :non_admin, -> {where(is_admin: false)}
   scope :inactive,  -> {where(approved: false)}
 
-  def active_for_authentication? 
-    super && approved? 
-  end 
+  def active_for_authentication?
+    super && approved?
+  end
 
-  def inactive_message 
-    if !approved? 
-      :not_approved 
-    else 
-      super # Use whatever other message 
-    end 
+  def inactive_message
+    if !approved?
+      :not_approved
+    else
+      super # Use whatever other message
+    end
   end
 
   def self.send_reset_password_instructions(attributes={})

@@ -66,6 +66,7 @@ class ConnectsController < ApplicationController
         end
       end
 
+      # kill outgoing connections from caller to any other agent on the line
       User.where("id != ?", agent_id).all.each do |user|
         ringing_call = @client.account.calls.list({
                                                     status: "ringing",
@@ -75,6 +76,11 @@ class ConnectsController < ApplicationController
         if ringing_call
           ringing_call.update(status: "completed")
         end
+      end
+
+      # kill other outgoing connections to current user after user has picked up a call
+      @client.account.calls.list({status: "ringing", to: "client:#{user.name}"}).each do |call|
+        call.update(status: "completed")
       end
 
       #FIXME: this is stupid but I can't figure out how to store nouns

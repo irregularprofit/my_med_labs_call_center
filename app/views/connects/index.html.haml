@@ -85,7 +85,9 @@
   });
 
   function show_call_end_status() {
+    // maybe only close the call that was otherwise picked
     $("#dialog-confirm").dialog("close");
+
     var difference = ($.now() - callLength) / 1000;
     currentCalller = "";
 

@@ -79,7 +79,8 @@ class ConnectsController < ApplicationController
       end
 
       # kill other outgoing connections to current user after user has picked up a call
-      @client.account.calls.list({status: "ringing", to: "client:#{user.name}"}).each do |call|
+      agent = User.find(agent_id)
+      @client.account.calls.list({status: "ringing", to: "client:#{agent.name}"}).each do |call|
         call.update(status: "completed")
       end
 

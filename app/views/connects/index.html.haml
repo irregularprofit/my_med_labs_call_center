@@ -13,7 +13,7 @@
 
 %ul#people
 
-#dialog-confirm{title: "Accept the call?"}
+#dialog-confirm{class: 'incoming_call_notification', title: "Accept the call?"}
   %p
 
 :javascript
@@ -35,11 +35,11 @@
   });
 
   Twilio.Device.disconnect(function (conn) {
-    show_call_end_status();
+    show_call_end_status(conn);
   });
 
   Twilio.Device.cancel(function (conn) {
-    show_call_end_status();
+    show_call_end_status(conn);
   });
 
   Twilio.Device.incoming(function (conn) {
@@ -51,9 +51,11 @@
       message = "Incoming conference request from " + conn.parameters.From + " accept?";
     }
 
-    $("#dialog-confirm").find('p').html(message);
+    $(".incoming_call_notification").find('p').html(message);
 
-    $("#dialog-confirm").dialog({
+    var functional_id = ("dialog-confirm" + conn.parameters.From).replace(" ", "-");
+
+    $(".incoming_call_notification").clone().dialog({
       resizable: true,
       modal: true,
       buttons: {
@@ -63,13 +65,15 @@
           }
           conn.accept();
           $(this).dialog("close");
+          $(this).remove();
         },
         Cancel: function() {
           conn.disconnect();
           $(this).dialog("close");
+          $(this).remove();
         }
       }
-    });
+    }).attr('id', functional_id);
   });
 
   Twilio.Device.presence(function (pres) {
@@ -84,9 +88,11 @@
     }
   });
 
-  function show_call_end_status() {
+  function show_call_end_status(conn) {
+    var functional_id = ("dialog-confirm" + conn.parameters.From).replace(" ", "-");
     // maybe only close the call that was otherwise picked
-    $("#dialog-confirm").dialog("close");
+    $("#" + functional_id).dialog("close");
+    $("#" + functional_id).remove();
 
     var difference = ($.now() - callLength) / 1000;
     currentCalller = "";

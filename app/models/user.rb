@@ -14,6 +14,9 @@ class User < ActiveRecord::Base
   scope :non_admin, -> {where(is_admin: false)}
   scope :inactive,  -> {where(approved: false)}
 
+  extend FriendlyId
+  friendly_id :name, use: :slugged
+
   def active_for_authentication?
     super && approved?
   end

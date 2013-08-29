@@ -82,6 +82,7 @@ GEM
       multi_json (~> 1.0)
     foreigner (1.4.2)
       activerecord (>= 3.0.0)
+    friendly_id (4.0.10)
     haml (4.0.3)
       tilt
     highline (1.6.19)
@@ -212,6 +213,7 @@ DEPENDENCIES
   foreigner
   formtastic!
   formtastic-bootstrap!
+  friendly_id
   haml
   jbuilder (~> 1.2)
   jquery-rails

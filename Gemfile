@@ -25,7 +25,7 @@ gem "devise", "~> 3.0.0"
 
 gem "haml"
 gem "colored"
-
+gem 'friendly_id'
 gem "cancan", "~> 1.6.10"
 
 # See https://github.com/sstephenson/execjs#readme for more supported runtimes

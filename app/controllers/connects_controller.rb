@@ -8,9 +8,9 @@ class ConnectsController < ApplicationController
     capability = Twilio::Util::Capability.new ACCOUNT_SID, AUTH_TOKEN
     # Create an application sid at twilio.com/user/account/apps and use it here
     capability.allow_client_outgoing "APeabd53438dea1a6b79f651bd14c9c875"
-    capability.allow_client_incoming current_user.name
+    capability.allow_client_incoming current_user.slug
     token = capability.generate
-    render :index, locals: {token: token, client_name: current_user.name}
+    render :index, locals: {token: token}
   end
 
   def enqueue
@@ -39,7 +39,7 @@ class ConnectsController < ApplicationController
       @client.account.calls.create(
         url: "http://my-med-labs-call-center.herokuapp.com/queue?agent_id=#{user.id}",
         from: params[:From],
-        to: "client:#{user.name}"
+        to: "client:#{user.slug}"
       )
     end
 
@@ -71,7 +71,7 @@ class ConnectsController < ApplicationController
         ringing_call = @client.account.calls.list({
                                                     status: "ringing",
                                                     from: params[:Caller],
-                                                    to: "client:#{user.name}"
+                                                    to: "client:#{user.slug}"
         }).first
         if ringing_call
           ringing_call.update(status: "completed")
@@ -80,7 +80,7 @@ class ConnectsController < ApplicationController
 
       # kill other outgoing connections to current user after user has picked up a call
       agent = User.find(agent_id)
-      @client.account.calls.list({status: "ringing", to: "client:#{agent.name}"}).each do |call|
+      @client.account.calls.list({status: "ringing", to: "client:#{agent.slug}"}).each do |call|
         call.update(status: "completed")
       end
 
@@ -108,7 +108,7 @@ class ConnectsController < ApplicationController
 
     call = @client.account.calls.create(
       url: "http://my-med-labs-call-center.herokuapp.com/conference",
-      from: "client:#{current_user.name}",
+      from: "client:#{current_user.slug}",
       to: "client:#{invited_agent}"
     )
 
@@ -125,15 +125,15 @@ class ConnectsController < ApplicationController
         puts "Call #{call.status} from #{call.from} to #{call.to} as #{call.direction} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".blue
         puts "Redirect call now".blue
         call.update(
-          url: "http://my-med-labs-call-center.herokuapp.com/conference?org=client:#{current_user.name}&dest=client:#{invited_agent}",
+          url: "http://my-med-labs-call-center.herokuapp.com/conference?org=client:#{current_user.slug}&dest=client:#{invited_agent}",
           method: "POST"
         )
       end
 
       call = @client.account.calls.create(
-        url: "http://my-med-labs-call-center.herokuapp.com/conference?org=client:#{current_user.name}&dest=client:#{invited_agent}",
+        url: "http://my-med-labs-call-center.herokuapp.com/conference?org=client:#{current_user.slug}&dest=client:#{invited_agent}",
         from: "client:#{invited_agent}",
-        to: "client:#{current_user.name}"
+        to: "client:#{current_user.slug}"
       )
     end
 
@@ -164,7 +164,7 @@ class ConnectsController < ApplicationController
     @client.account.calls.list({
                                  :"start_time>" => Date.today.to_s,
                                  :"start_time<" => Date.tomorrow.to_s,
-                                 to: "client:#{current_user.name}"
+                                 to: "client:#{current_user.slug}"
     }).each do |call|
       puts "Call #{call.status} from #{call.from} to #{call.to} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".red_on_yellow
     end

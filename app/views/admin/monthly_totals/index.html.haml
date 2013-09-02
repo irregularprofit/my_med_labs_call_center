@@ -1,0 +1,18 @@
+%ul.nav.nav-tabs
+  - @monthly_totals.keys.each do |month|
+    %li{class: "#{'active' if month == Time.now.beginning_of_month.strftime("%B-%Y")}"}
+      %a{href: "##{month.downcase}", "data-toggle" => "tab"}= month
+.tab-content
+  - @monthly_totals.each_pair do |month, totals|
+    .tab-pane{id: month.downcase, class: "#{'active' if month == Time.now.beginning_of_month.strftime("%B-%Y")}"}
+      - if totals.blank?
+        No data for this month
+      - else
+        %table.table.table-striped
+          %tr
+            %th Agent
+            %th Total
+          - totals.each do |total|
+            %tr
+              %td= total.user.name
+              %td= "#{total.duration.divmod(3600)[0]} h - #{total.duration.divmod(3600)[1] / 60} m"

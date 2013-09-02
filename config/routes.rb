@@ -1,14 +1,13 @@
 MyMedLabsCallCenter::Application.routes.draw do
-
   devise_for :users
 
   namespace :admin do
     resources :users
+    resources :logs, only: :index
+    resources :monthly_totals, only: :index
   end
   root to: "home#index"
   resources :connects, only: :index
-
-  resources :logs
 
   post '/enqueue' => 'connects#enqueue', as: :enqueue
   get '/wait_url' => 'connects#wait_url', as: :wait_url

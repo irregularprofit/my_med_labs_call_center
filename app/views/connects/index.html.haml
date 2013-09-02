@@ -1,17 +1,23 @@
-%button.hangup{onclick: "check_rooms();"}
-  check
+.span9
+  .buttons-container.centered.row-fluid
+    %button.hangup{onclick: "check_rooms();", class: "btn btn-large btn-success"}
+      check
+    %button.hangup{onclick: "hangup();", class: "btn btn-large btn-danger"}
+      Hangup
+    %button.hangup{onclick: "check_logs();", class: "btn btn-large"}
+      Logs
+  .clearfix
+  %br
+  %br
+  %br
+  %h4 Current Call Status
+  #log Loading pigeons...
 
-%button.hangup{onclick: "hangup();"}
-  Hangup
+  %div.agent_name= "Agent name: #{current_user.name}"
 
-%button.hangup{onclick: "check_logs();"}
-  Logs
-
-#log Loading pigeons...
-
-%div.agent_name= "Agent name: #{current_user.name}"
-
-%ul#people
+.span3.people-container
+  %h3 Add Agent To Call
+  %ul.nav.nav-pills.nav-stacked#people
 
 #dialog-confirm{class: 'incoming_call_notification', title: "Accept the call?"}
   %p

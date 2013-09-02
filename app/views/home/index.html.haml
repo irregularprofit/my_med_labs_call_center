@@ -1,7 +1,7 @@
-%h1 Welcome to MyMedLabs Call Center Application
-= link_to "Sign In", new_user_session_path, class: "btn btn-primary"
-= link_to "Register", new_user_registration_path, class: "btn btn-primary"
-
-%p
-- if current_user
-  = link_to "Connect", connects_url
+.hero
+  %h1 Welcome to MyMedLabs Call Center Application
+  - if current_user
+    = link_to "Dashboard", connects_url, class: "btn btn-primary"
+  - else
+    = link_to "Sign In", new_user_session_path, class: "btn btn-primary"
+    = link_to "Register", new_user_registration_path, class: "btn btn-primary"

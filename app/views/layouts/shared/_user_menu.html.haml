@@ -1,5 +1,6 @@
 .pull-right
   - if current_user
+    .icon-user
     Hello #{current_user.name || current_user.email}
     = link_to "Sign out", destroy_user_session_path, method: :delete
   - else

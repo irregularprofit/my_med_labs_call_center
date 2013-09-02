@@ -25,13 +25,14 @@ gem "devise", "~> 3.0.0"
 
 gem "haml"
 gem "colored"
-gem 'friendly_id'
+gem 'friendly_id', github: 'FriendlyId/friendly_id', branch: '5.0-stable'
 gem "cancan", "~> 1.6.10"
 
 # See https://github.com/sstephenson/execjs#readme for more supported runtimes
 gem "therubyracer"
 gem "less-rails" #Sprockets (what Rails 3.1 uses for its asset pipeline) supports LESS
 gem "twitter-bootstrap-rails", :git => 'git://github.com/seyhunak/twitter-bootstrap-rails.git'
+gem "font-awesome-rails"
 
 # Use jquery as the JavaScript library
 gem 'jquery-rails'

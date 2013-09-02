@@ -8,6 +8,8 @@ MyMedLabsCallCenter::Application.routes.draw do
   root to: "home#index"
   resources :connects, only: :index
 
+  resources :logs
+
   post '/enqueue' => 'connects#enqueue', as: :enqueue
   get '/wait_url' => 'connects#wait_url', as: :wait_url
   post '/queue' => 'connects#queue', as: :queue

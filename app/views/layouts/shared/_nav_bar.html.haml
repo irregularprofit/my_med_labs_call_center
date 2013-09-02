@@ -3,10 +3,10 @@
   %span.icon-bar
   %span.icon-bar
 = link_to "My Med Labs Call Center", root_path, class: "brand"
-- if current_user && current_user.is_admin?
-  .container-fluid.nav-collapse
+.container-fluid.nav-collapse
+  - if current_user && current_user.is_admin?
     %ul.nav
-      %li= link_to "Logs", "javascript:void(0);"
+      %li= link_to "Logs", logs_path
       %li= link_to "Monthly Total", "javascript:void(0);"
       %li= link_to "Users", admin_users_path
-= render "/layouts/shared/user_menu"
+  = render "/layouts/shared/user_menu"

@@ -1,0 +1,12 @@
+%table.table.table-striped
+  %tr
+    %th User
+    %th Duration
+    %th Date / Time
+  - @logs.each do |log|
+    %tr
+      %td= log.user.name
+      %td= "#{log.duration / 60} M : #{log.duration % 60} S"
+      %td= log.created_at.strftime("%m-%d-%Y | %H:%m")
+
+= paginate @logs

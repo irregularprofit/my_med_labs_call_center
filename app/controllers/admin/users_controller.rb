@@ -27,7 +27,7 @@ class Admin::UsersController < AdminsController
   end
 
   def user
-    @user ||= User.find(params[:id])
+    @user ||= User.find_by_slug(params[:id])
   end
 
 end

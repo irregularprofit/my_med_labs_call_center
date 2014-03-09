@@ -6,6 +6,7 @@ class User < ActiveRecord::Base
          :recoverable, :rememberable, :trackable, :validatable
 
   after_create :send_admin_mail
+  after_create :underscore_paramaterize_slug
 
   has_many :call_logs
 
@@ -15,7 +16,7 @@ class User < ActiveRecord::Base
   scope :inactive,  -> {where(approved: false)}
 
   extend FriendlyId
-  friendly_id :name, use: :slugged
+  friendly_id :name, use: :slugged, sequence_separator: "_"
 
   def active_for_authentication?
     super && approved?
@@ -40,6 +41,11 @@ class User < ActiveRecord::Base
   end
 
   private
+
+  def underscore_paramaterize_slug
+    self.slug = self.slug.underscore
+    self.save
+  end
 
   def send_admin_mail
     AdminMailer.new_user_waiting_for_approval(self).deliver

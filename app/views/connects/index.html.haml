@@ -1,10 +1,18 @@
 .span9
+
   .buttons-container.centered.row-fluid
-    %button.hangup{onclick: "check_rooms();", class: "btn btn-large btn-success"}
+    %input#ToNumber{name: "ToNumber", placeholder: "Enter a phone number to call", type: "text"}/
+
+    %button{onclick: "dial();", class: "btn btn-large btn-success"}
+      dial
+
+
+  .buttons-container.centered.row-fluid
+    %button{onclick: "check_rooms();", class: "btn btn-large btn-success"}
       check
-    %button.hangup{onclick: "hangup();", class: "btn btn-large btn-danger"}
+    %button{onclick: "hangup();", class: "btn btn-large btn-danger"}
       Hangup
-    %button.hangup{onclick: "check_logs();", class: "btn btn-large"}
+    %button{onclick: "check_logs();", class: "btn btn-large"}
       Logs
   .clearfix
   %br
@@ -115,6 +123,12 @@
   function conference(name, number) {
     $.post("http://my-med-labs-call-center.herokuapp.com/init_conference", { agent: name, from: number } );
   }
+
+  function dial() {
+    to_number = $("#ToNumber").val();
+    $.post("http://my-med-labs-call-center.herokuapp.com/dial", {to_number: to_number});
+  }
+
 
   function check_rooms() {
     $.post("http://my-med-labs-call-center.herokuapp.com/check_rooms");

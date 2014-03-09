@@ -26,6 +26,17 @@ class ConnectsController < ApplicationController
     render text: response_text
   end
 
+  def dial
+    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+
+    @call = @client.account.calls.create(
+      from: CALLER_ID,   # From your Twilio number
+      to: params[:to_number],     # To any number
+      # Fetch instructions from this URL when the call connects
+      url: 'https://www.dropbox.com/s/z97h9xl4eu47v6d/banana.mp3?dl=1'
+    )
+  end
+
   def wait_url
     position = params[:QueuePosition]
     response = Twilio::TwiML::Response.new do |r|

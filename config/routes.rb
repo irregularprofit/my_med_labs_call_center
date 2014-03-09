@@ -17,6 +17,7 @@ MyMedLabsCallCenter::Application.routes.draw do
   post '/init_conference' => 'connects#init_conference', as: :init_conference
   post '/conference' => 'connects#conference', as: :conference
   post '/check_rooms' => 'connects#check_rooms', as: :check_rooms
+  post '/dial' => 'connects#dial', as: :dial
 
   post '/check_logs' => 'connects#check_logs', as: :check_logs
 end

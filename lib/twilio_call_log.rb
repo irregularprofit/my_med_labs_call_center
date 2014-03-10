@@ -15,10 +15,29 @@ class TwilioCallLog
             duration:  call.duration,
             start_time:  call.start_time,
             end_time:  call.end_time,
-            from:  call.from
+            from:  call.from,
+            to:  call.to,
+            call_type: CallLog::INCOMING
           )
         end
       end
+
+      query_condition.merge!({from: "client:#{user.name}"})
+      client.account.calls.list(query_condition).each do |call|
+        unless CallLog.exists?(sid: call.sid)
+          CallLog.create(
+            sid:  call.sid,
+            user_id:  user.id,
+            duration:  call.duration,
+            start_time:  call.start_time,
+            end_time:  call.end_time,
+            from:  call.from,
+            to:  call.to,
+            call_type: CallLog::OUTGOING
+          )
+        end
+      end
+
     end
   end
 end

@@ -10,14 +10,14 @@ class TwilioCallLog
       client.account.calls.list(query_condition).each do |call|
         unless CallLog.exists?(sid: call.sid)
           CallLog.create(
-            sid:  call.sid,
-            user_id:  user.id,
-            duration:  call.duration,
-            start_time:  call.start_time,
-            end_time:  call.end_time,
-            from:  call.from,
-            to:  call.to,
-            call_type: CallLog::INCOMING
+            sid:        call.sid,
+            user_id:    user.id,
+            duration:   call.duration,
+            start_time: call.start_time,
+            end_time:   call.end_time,
+            from:       call.from,
+            to:         call.to,
+            call_type:  CallLog::INCOMING
           )
         end
       end
@@ -26,14 +26,14 @@ class TwilioCallLog
       client.account.calls.list(query_condition).each do |call|
         unless CallLog.exists?(sid: call.sid)
           CallLog.create(
-            sid:  call.sid,
-            user_id:  user.id,
-            duration:  call.duration,
-            start_time:  call.start_time,
-            end_time:  call.end_time,
-            from:  call.from,
-            to:  call.to,
-            call_type: CallLog::OUTGOING
+            sid:        call.sid,
+            user_id:    user.id,
+            duration:   call.duration,
+            start_time: call.start_time,
+            end_time:   call.end_time,
+            from:       call.from,
+            to:         call.to,
+            call_type:  CallLog::OUTGOING
           )
         end
       end

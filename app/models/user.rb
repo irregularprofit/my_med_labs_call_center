@@ -9,6 +9,7 @@ class User < ActiveRecord::Base
   after_create :underscore_paramaterize_slug
 
   has_many :call_logs
+  has_one :schedule
 
   scope :active,    -> {where(approved: true)}
   scope :admin,     -> {where(is_admin: true)}
@@ -38,6 +39,20 @@ class User < ActiveRecord::Base
       recoverable.send_reset_password_instructions
     end
     recoverable
+  end
+
+  def on_call?
+    schedule = self.schedule
+    return true if schedule.nil? || !schedule.enabled?
+
+    time = Time.now
+
+    time.wday > schedule.start_day &&
+      time.wday < schedule.end_day &&
+      time.hour > schedule.start_hour &&
+      time.hour < schedule.end_hour &&
+      time.min > schedule.start_min &&
+      time.min < schedule.end_min
   end
 
   private

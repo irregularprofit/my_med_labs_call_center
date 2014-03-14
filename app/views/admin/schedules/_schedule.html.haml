@@ -1,0 +1,10 @@
+%tr
+  %th= schedule.user.name
+  %th= schedule.enabled?
+  %th= schedule.start_time
+  %th= schedule.end_time
+  %th
+
+    = link_to (schedule.enabled? ? "Disable" : "Enable"), admin_schedule_path(schedule, schedule: {enabled: !schedule.enabled?}), class: "btn btn-primary", method: :put
+
+    = link_to "Delete", admin_schedule_path(schedule), class: "btn btn-danger", data: {confirm: "Are you sure you want delete this schedule for the user?"}, method: :delete

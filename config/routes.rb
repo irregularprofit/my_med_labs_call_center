@@ -3,6 +3,7 @@ MyMedLabsCallCenter::Application.routes.draw do
 
   namespace :admin do
     resources :users
+    resources :schedules
     resources :logs, only: :index
     resources :monthly_totals, only: :index
   end

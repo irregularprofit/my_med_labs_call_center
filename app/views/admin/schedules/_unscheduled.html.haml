@@ -1,0 +1,13 @@
+= semantic_form_for user.build_schedule, url: admin_schedules_url do |f|
+  = f.input :user_id, as: :hidden, value: user.id
+  %tr
+    %th= user.name
+    %th
+      = f.input :start_day, label: false, as: :select, collection: Date::DAYNAMES.each_with_index.to_a, prompt: "Day"
+      = f.input :start_hour, label: false, as: :select, collection: Schedule::HOURS, prompt: "Hour"
+      = f.input :start_min, label: false, as: :select, collection: Schedule::MINS, prompt: "Min"
+    %th
+      = f.input :end_day, label: false, as: :select, collection: Date::DAYNAMES.each_with_index.to_a, prompt: "Day"
+      = f.input :end_hour, label: false, as: :select, collection: Schedule::HOURS, prompt: "Hour"
+      = f.input :end_min, label: false, as: :select, collection: Schedule::MINS, prompt: "min"
+    %th= f.action :submit

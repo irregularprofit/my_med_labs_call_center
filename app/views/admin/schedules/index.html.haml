@@ -1,0 +1,17 @@
+%h2 Users on Schedule
+%table.table.table-striped
+  %tr
+    %th Name
+    %th Enabled
+    %th Start Time
+    %th End Time
+    %th Actions
+  = render partial: "/admin/schedules/schedule", collection: @schedules, as: :schedule
+%h2 Users Without Schedule
+%table.table.table-striped
+  %tr
+    %th Name
+    %th Start Time
+    %th End Time
+    %th Actions
+  = render partial: "/admin/schedules/unscheduled", collection: @unscheduled, as: :user

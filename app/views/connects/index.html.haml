@@ -57,37 +57,40 @@
   });
 
   Twilio.Device.incoming(function (conn) {
-    var message = "";
+    var on_call = "#{current_user.on_call?}";
+    if (on_call == "true") {
+      var message = "";
 
-    if (conn.parameters.From.match(/^client:/) == null) {
-      message = "Incoming user call from " + conn.parameters.From + ". Pickup?";
-    } else if (conn.parameters.From != conn.parameters.To) {
-      message = "Incoming conference request from " + conn.parameters.From + " accept?";
-    }
-
-    $(".incoming_call_notification").find('p').html(message);
-
-    var functional_id = ("dialog-confirm" + conn.parameters.From).replace(" ", "-");
-
-    $(".incoming_call_notification").clone().dialog({
-      resizable: true,
-      modal: true,
-      buttons: {
-        "Accept": function() {
-          if (conn.parameters.From.match(/^client:/) == null) {
-            currentCalller = conn.parameters.From;
-          }
-          conn.accept();
-          $(this).dialog("close");
-          $(this).remove();
-        },
-        Cancel: function() {
-          conn.disconnect();
-          $(this).dialog("close");
-          $(this).remove();
-        }
+      if (conn.parameters.From.match(/^client:/) == null) {
+        message = "Incoming user call from " + conn.parameters.From + ". Pickup?";
+      } else if (conn.parameters.From != conn.parameters.To) {
+        message = "Incoming conference request from " + conn.parameters.From + " accept?";
       }
-    }).attr('id', functional_id);
+
+      $(".incoming_call_notification").find('p').html(message);
+
+      var functional_id = ("dialog-confirm" + conn.parameters.From).replace(" ", "-");
+
+      $(".incoming_call_notification").clone().dialog({
+        resizable: true,
+        modal: true,
+        buttons: {
+          "Accept": function() {
+            if (conn.parameters.From.match(/^client:/) == null) {
+              currentCalller = conn.parameters.From;
+            }
+            conn.accept();
+            $(this).dialog("close");
+            $(this).remove();
+          },
+          Cancel: function() {
+            conn.disconnect();
+            $(this).dialog("close");
+            $(this).remove();
+          }
+        }
+      }).attr('id', functional_id);
+    }
   });
 
   Twilio.Device.presence(function (pres) {

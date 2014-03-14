@@ -28,10 +28,12 @@ class ConnectsController < ApplicationController
 
   def dial
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+    call_number = params[:to_number]
+    call_number = "+#{call_number}" unless call_number.start_with?("+")
 
     @call = @client.account.calls.create(
       from: CALLER_ID,   # From your Twilio number
-      to: params[:to_number],     # To any number
+      to: call_number,     # To any number
       # Fetch instructions from this URL when the call connects
       url: 'https://www.dropbox.com/s/z97h9xl4eu47v6d/banana.mp3?dl=1'
     )

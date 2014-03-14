@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20140310063310) do
+ActiveRecord::Schema.define(version: 20140312053906) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -34,6 +34,19 @@ ActiveRecord::Schema.define(version: 20140310063310) do
     t.date     "date"
     t.integer  "duration",   default: 0
     t.integer  "user_id"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  create_table "schedules", force: true do |t|
+    t.integer  "start_day"
+    t.integer  "start_hour"
+    t.integer  "start_min"
+    t.integer  "end_day"
+    t.integer  "end_hour"
+    t.integer  "end_min"
+    t.integer  "user_id"
+    t.boolean  "enabled"
     t.datetime "created_at"
     t.datetime "updated_at"
   end

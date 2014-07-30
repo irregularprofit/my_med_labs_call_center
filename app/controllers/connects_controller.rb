@@ -7,36 +7,37 @@ class ConnectsController < ApplicationController
   def index
     capability = Twilio::Util::Capability.new ACCOUNT_SID, AUTH_TOKEN
     # Create an application sid at twilio.com/user/account/apps and use it here
-    capability.allow_client_outgoing "APeabd53438dea1a6b79f651bd14c9c875"
+    capability.allow_client_outgoing "APe93a057ba33c10d6e6775f9833adbd24"
     capability.allow_client_incoming current_user.slug
     token = capability.generate
     render :index, locals: {token: token}
   end
 
-  def enqueue
-    response = Twilio::TwiML::Response.new do |r|
-      r.Enqueue waitUrl: '/wait_url.xml', waitUrlMethod: 'GET' do |d|
 
+  def enqueue
+    number = params[:PhoneNumber]
+
+    if number
+      number = "+#{number}" unless number.start_with?("+")
+      response = Twilio::TwiML::Response.new do |r|
+         r.Dial callerId: CALLER_ID do |d|
+           d.Number(number)
+         end
       end
+
+      response_text = response.text
+    else
+      response = Twilio::TwiML::Response.new do |r|
+        r.Enqueue waitUrl: '/wait_url.xml', waitUrlMethod: 'GET' do |d|
+
+        end
+      end
+      #FIXME: this is stupid but I can't figure out how to store nouns
+      response_text = response.text
+      response_text = response_text.gsub("</Enqueue>", "support</Enqueue>")
     end
-    #FIXME: this is stupid but I can't figure out how to store nouns
-    response_text = response.text
-    response_text = response_text.gsub("</Enqueue>", "support</Enqueue>")
 
     render text: response_text
-  end
-
-  def dial
-    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
-    call_number = params[:to_number]
-    call_number = "+#{call_number}" unless call_number.start_with?("+")
-
-    @call = @client.account.calls.create(
-      from: CALLER_ID,   # From your Twilio number
-      to: call_number,     # To any number
-      # Fetch instructions from this URL when the call connects
-      url: 'https://www.dropbox.com/s/z97h9xl4eu47v6d/banana.mp3?dl=1'
-    )
   end
 
   def wait_url

@@ -33,6 +33,7 @@
 :javascript
   var callLength;
   var currentCalller;
+
   Twilio.Device.setup("#{token}", {debug: true});
 
   Twilio.Device.ready(function (device) {
@@ -59,6 +60,7 @@
   Twilio.Device.incoming(function (conn) {
     var on_call = "#{current_user.on_call?}";
     if (on_call == "true") {
+
       var message = "";
 
       if (conn.parameters.From.match(/^client:/) == null) {
@@ -90,6 +92,7 @@
           }
         }
       }).attr('id', functional_id);
+
     }
   });
 
@@ -128,10 +131,9 @@
   }
 
   function dial() {
-    to_number = $("#ToNumber").val();
-    $.post("http://my-med-labs-call-center.herokuapp.com/dial", {to_number: to_number});
+    params = {"PhoneNumber": $("#ToNumber").val()};
+    Twilio.Device.connect(params);
   }
-
 
   function check_rooms() {
     $.post("http://my-med-labs-call-center.herokuapp.com/check_rooms");

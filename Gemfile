@@ -48,6 +48,7 @@ gem 'jbuilder', '~> 1.2'
 gem "rails_12factor"
 
 gem 'twilio-ruby'
+gem 'ruby-notify-my-android'
 
 group :doc do
   # bundle exec rake doc:rails generates the API under doc/api.

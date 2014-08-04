@@ -1,4 +1,6 @@
 class User < ActiveRecord::Base
+  acts_as_token_authenticatable
+
   # Include default devise modules. Others available are:
   # :token_authenticatable, :confirmable,
   # :lockable, :timeoutable and :omniauthable
@@ -42,11 +44,17 @@ class User < ActiveRecord::Base
   end
 
   def on_call?
+    return true # always on for testing
+
+
+
     schedule = self.schedule
-    return true if schedule.nil? || !schedule.enabled?
+    # user is not on call if there is no schedule, or if schedule is disabled
+    return false if schedule.nil? || !schedule.enabled?
 
     time = Time.now
 
+    # current time is greater than schedule start time and less than schedule off time
     time.wday > schedule.start_day &&
       time.wday < schedule.end_day &&
       time.hour > schedule.start_hour &&

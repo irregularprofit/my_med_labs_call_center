@@ -21,7 +21,7 @@ gem 'coffee-rails', '~> 4.0.0'
 gem "formtastic", git: "https://github.com/justinfrench/formtastic.git"
 gem "formtastic-bootstrap", git: "https://github.com/mjbellantoni/formtastic-bootstrap.git"
 
-gem "devise", "~> 3.0.0"
+gem "devise", "~> 3.2.0"
 
 gem "haml"
 gem "colored"
@@ -48,7 +48,7 @@ gem 'jbuilder', '~> 1.2'
 gem "rails_12factor"
 
 gem 'twilio-ruby'
-gem 'ruby-notify-my-android'
+gem 'simple_token_authentication'
 
 group :doc do
   # bundle exec rake doc:rails generates the API under doc/api.

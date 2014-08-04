@@ -1,22 +1,25 @@
 class ConnectsController < ApplicationController
   layout "connect"
 
+  acts_as_token_authentication_handler_for User, only: [:index]
+
   before_filter :check_logged_in_user, only: :index
   skip_before_filter :verify_authenticity_token
 
   def index
     capability = Twilio::Util::Capability.new ACCOUNT_SID, AUTH_TOKEN
     # Create an application sid at twilio.com/user/account/apps and use it here
-    capability.allow_client_outgoing "APe93a057ba33c10d6e6775f9833adbd24"
+    capability.allow_client_outgoing APP_TOKEN
     capability.allow_client_incoming current_user.slug
     token = capability.generate
+    @agent_login = params[:agent_login] == 'true'
     render :index, locals: {token: token}
   end
-
 
   def enqueue
     number = params[:PhoneNumber]
 
+    # dialing a number
     if number
       number = "+#{number}" unless number.start_with?("+")
       response = Twilio::TwiML::Response.new do |r|
@@ -26,6 +29,7 @@ class ConnectsController < ApplicationController
       end
 
       response_text = response.text
+    # receive call, put caller on queue
     else
       response = Twilio::TwiML::Response.new do |r|
         r.Enqueue waitUrl: '/wait_url.xml', waitUrlMethod: 'GET' do |d|
@@ -49,19 +53,32 @@ class ConnectsController < ApplicationController
 
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
 
+    sleep 10
+
+    puts params[:Form].inspect
+    puts params.inspect
+
+    @client.account.calls.list({status: "ringing", to: APP_TOKEN, direction: "inbound"}).each do |call|
+      puts "ringing - Call #{call.status} from #{call.from} to #{call.to} as #{call.direction} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".blue
+    end
+
+    # dial all on_call users
     User.all.each do |user|
-      @client.account.calls.create(
-        url: "http://my-med-labs-call-center.herokuapp.com/queue?agent_id=#{user.id}",
-        from: params[:From],
-        to: "client:#{user.slug}"
-      )
+      if user.on_call?
+        PushOver.send_ping(user, params[:From])
+        @client.account.calls.create(
+          url: "http://my-med-labs-call-center.herokuapp.com/queue?agent_id=#{user.id}",
+          from: params[:From],
+          to: "client:#{user.slug}"
+        )
+      end
     end
 
     render text: response.text
   end
 
   def queue
-    agent_id = params[:agent_id]
+    agent_id = params[:agent_id] || current_user.slug
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
 
     if @client.account.queues.list.first.current_size == 0

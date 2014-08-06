@@ -6,11 +6,6 @@
     %button{onclick: "dial();", class: "btn btn-large btn-success"}
       dial
 
-  - if @agent_login
-    .buttons-container.centered.row-fluid
-      %button{onclick: "dequeue();", class: "btn btn-large btn-success"}
-        Accept
-
   .buttons-container.centered.row-fluid
     %button{onclick: "check_rooms();", class: "btn btn-large btn-success"}
       check
@@ -137,10 +132,6 @@
   function dial() {
     params = {"PhoneNumber": $("#ToNumber").val()};
     Twilio.Device.connect(params);
-  }
-
-  function dequeue() {
-    $.post("http://my-med-labs-call-center.herokuapp.com/queue");
   }
 
   function check_rooms() {

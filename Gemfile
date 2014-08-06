@@ -55,6 +55,8 @@ group :doc do
   gem 'sdoc', require: false
 end
 
+gem 'delayed_job_active_record'
+
 group :development do
   gem "letter_opener"
   gem 'capistrano', '~> 2.13.5'

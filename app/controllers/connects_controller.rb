@@ -1,7 +1,7 @@
 class ConnectsController < ApplicationController
   layout "connect"
 
-  acts_as_token_authentication_handler_for User, only: [:index]
+  acts_as_token_authentication_handler_for User, only: [:index, :queue]
 
   before_filter :check_logged_in_user, only: :index
   skip_before_filter :verify_authenticity_token
@@ -15,18 +15,12 @@ class ConnectsController < ApplicationController
     token = capability.generate
 
     if params[:from]
-      client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
-
-      number = params[:from].strip
+      number = params[:from].dup
+      number = number.strip
       number = "+#{number}" unless number.start_with?("+")
 
-      # sign_in current_user
-
-      @agent_login = client.account.calls.list({
-        status: "ringing",
-        from: number,
-        to: "client:#{current_user.slug}",
-        direction: "outbound-api"}).present?
+      push_over = PushOver.new({user: current_user, from: number})
+      push_over.dial_user()
     end
 
     render :index, locals: {token: token}
@@ -39,13 +33,13 @@ class ConnectsController < ApplicationController
     if number
       number = "+#{number}" unless number.start_with?("+")
       response = Twilio::TwiML::Response.new do |r|
-         r.Dial callerId: CALLER_ID do |d|
-           d.Number(number)
-         end
+        r.Dial callerId: CALLER_ID do |d|
+          d.Number(number)
+        end
       end
 
       response_text = response.text
-    # receive call, put caller on queue
+      # receive call, put caller on queue
     else
       response = Twilio::TwiML::Response.new do |r|
         r.Enqueue waitUrl: '/wait_url.xml', waitUrlMethod: 'GET' do |d|
@@ -67,35 +61,15 @@ class ConnectsController < ApplicationController
       r.Play 'https://www.dropbox.com/s/z97h9xl4eu47v6d/banana.mp3?dl=1'
     end
 
-    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
-
-    sleep 5
-
-    still_ringing = @client.account.calls.list({
-      status: "ringing",
-      from: params[:From],
-      to: CALLER_ID,
-      direction: "inbound"}).present?
-
-    if still_ringing
-      # dial all on_call users
-      User.all.each do |user|
-        if user.on_call? && user.devices.first
-          PushOver.send_ping(user, params[:From], user.devices.first)
-          @client.account.calls.create(
-            url: "http://my-med-labs-call-center.herokuapp.com/queue?agent_id=#{user.id}",
-            from: params[:From],
-            to: "client:#{user.slug}"
-          )
-        end
-      end
-    end
+    push_over = PushOver.new({from: params[:From]})
+    push_over.prepare_call()
 
     render text: response.text
   end
 
   def queue
-    agent_id = params[:agent_id] || current_user.slug
+    agent_id = params[:agent_id] || current_user.id
+
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
 
     if @client.account.queues.list.first.current_size == 0
@@ -112,6 +86,10 @@ class ConnectsController < ApplicationController
 
           end
         end
+      end
+
+      @client.account.calls.list({to: "client:#{current_user.slug}"}).each do |call|
+        puts "Call #{call.status} from #{call.from} to #{call.to} as #{call.direction} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".red
       end
 
       # kill outgoing connections from caller to any other agent on the line
@@ -151,6 +129,11 @@ class ConnectsController < ApplicationController
   def init_conference
     invited_agent = params[:agent]
     number = params[:from]
+
+    puts '----------------------'
+    puts current_user.inspect
+    puts params.inspect
+
 
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
 
@@ -192,6 +175,10 @@ class ConnectsController < ApplicationController
     from_agent = params[:org] || params[:From]
     to_agent = params[:dest] || params[:To]
 
+    puts '///////////////////////'
+    puts current_user.inspect
+    puts params.inspect
+
     response = Twilio::TwiML::Response.new do |r|
       r.Dial do |d|
         d.Conference waitUrl: '', startConferenceOnEnter: true, endConferenceOnExit: true do |d|
@@ -203,6 +190,8 @@ class ConnectsController < ApplicationController
     #FIXME: this is stupid but I can't figure out how to store nouns
     response_text = response.text
     response_text = response_text.gsub("</Conference>", "#{from_agent}_conference_#{to_agent}</Conference>")
+
+    puts response_text.inspect
 
     render text: response_text
   end

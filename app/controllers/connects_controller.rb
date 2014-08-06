@@ -8,11 +8,27 @@ class ConnectsController < ApplicationController
 
   def index
     capability = Twilio::Util::Capability.new ACCOUNT_SID, AUTH_TOKEN
+
     # Create an application sid at twilio.com/user/account/apps and use it here
     capability.allow_client_outgoing APP_TOKEN
     capability.allow_client_incoming current_user.slug
     token = capability.generate
-    @agent_login = params[:agent_login] == 'true'
+
+    if params[:from]
+      client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+
+      number = params[:from].strip
+      number = "+#{number}" unless number.start_with?("+")
+
+      # sign_in current_user
+
+      @agent_login = client.account.calls.list({
+        status: "ringing",
+        from: number,
+        to: "client:#{current_user.slug}",
+        direction: "outbound-api"}).present?
+    end
+
     render :index, locals: {token: token}
   end
 
@@ -53,24 +69,25 @@ class ConnectsController < ApplicationController
 
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
 
-    sleep 10
+    sleep 5
 
-    puts params[:Form].inspect
-    puts params.inspect
+    still_ringing = @client.account.calls.list({
+      status: "ringing",
+      from: params[:From],
+      to: CALLER_ID,
+      direction: "inbound"}).present?
 
-    @client.account.calls.list({status: "ringing", to: APP_TOKEN, direction: "inbound"}).each do |call|
-      puts "ringing - Call #{call.status} from #{call.from} to #{call.to} as #{call.direction} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".blue
-    end
-
-    # dial all on_call users
-    User.all.each do |user|
-      if user.on_call?
-        PushOver.send_ping(user, params[:From])
-        @client.account.calls.create(
-          url: "http://my-med-labs-call-center.herokuapp.com/queue?agent_id=#{user.id}",
-          from: params[:From],
-          to: "client:#{user.slug}"
-        )
+    if still_ringing
+      # dial all on_call users
+      User.all.each do |user|
+        if user.on_call? && user.devices.first
+          PushOver.send_ping(user, params[:From], user.devices.first)
+          @client.account.calls.create(
+            url: "http://my-med-labs-call-center.herokuapp.com/queue?agent_id=#{user.id}",
+            from: params[:From],
+            to: "client:#{user.slug}"
+          )
+        end
       end
     end
 

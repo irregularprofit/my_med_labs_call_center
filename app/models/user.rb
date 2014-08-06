@@ -11,6 +11,7 @@ class User < ActiveRecord::Base
   after_create :underscore_paramaterize_slug
 
   has_many :call_logs
+  has_many :devices
   has_one :schedule
 
   scope :active,    -> {where(approved: true)}

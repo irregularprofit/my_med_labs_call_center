@@ -11,21 +11,25 @@ class PushOver
     if still_ringing?
       # dial all on_call users
       User.all.each do |agent|
-        if agent.on_call? && agent.devices.first
-          send_ping(agent, agent.devices.first)
+        if agent.on_call?
+          if agent.devices.first
+            send_ping(agent, agent.devices.first)
+          end
+          dial_user(agent)
         end
       end
     end
   end
 
-  def dial_user
+  def dial_user(agent = nil)
     @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+    recipient = agent || @user
 
     if still_ringing?
       @client.account.calls.create(
-        url: "http://my-med-labs-call-center.herokuapp.com/queue?user_email=#{@user.email}&user_token=#{@user.authentication_token}",
+        url: "http://my-med-labs-call-center.herokuapp.com/queue?user_email=#{recipient.email}&user_token=#{recipient.authentication_token}",
         from: @from,
-        to: "client:#{@user.slug}"
+        to: "client:#{recipient.slug}"
       )
     end
   end
@@ -58,7 +62,23 @@ class PushOver
     res.start {|http| http.request(req) }
   end
 
+  def invite_to_conference(invited_agent, from, room = nil)
+    agent = User.find_by_slug(invited_agent)
+
+    url = "http://my-med-labs-call-center.herokuapp.com/conference?user_email=#{agent.email}&user_token=#{agent.authentication_token}"
+    url = "#{url}&room=#{room}" if room
+
+    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+    @client.account.calls.create(
+      url: url,
+      from: "client:#{from}",
+      to: "client:#{invited_agent}"
+    )
+
+  end
+
   handle_asynchronously :prepare_call, run_at: Proc.new { 8.seconds.from_now }
   handle_asynchronously :dial_user, run_at: Proc.new { 5.seconds.from_now }
+  handle_asynchronously :invite_to_conference
 
 end

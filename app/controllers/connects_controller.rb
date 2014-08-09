@@ -1,9 +1,8 @@
 class ConnectsController < ApplicationController
   layout "connect"
 
-  acts_as_token_authentication_handler_for User, only: [:index, :queue]
-
-  before_filter :check_logged_in_user, only: :index
+  acts_as_token_authentication_handler_for User, only: [:index, :queue, :conference]
+  before_filter :print_stuff
   skip_before_filter :verify_authenticity_token
 
   def index
@@ -88,10 +87,6 @@ class ConnectsController < ApplicationController
         end
       end
 
-      @client.account.calls.list({to: "client:#{current_user.slug}"}).each do |call|
-        puts "Call #{call.status} from #{call.from} to #{call.to} as #{call.direction} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".red
-      end
-
       # kill outgoing connections from caller to any other agent on the line
       User.where("id != ?", agent_id).all.each do |user|
         ringing_call = @client.account.calls.list({
@@ -129,19 +124,10 @@ class ConnectsController < ApplicationController
   def init_conference
     invited_agent = params[:agent]
     number = params[:from]
+    agent = User.find_by_slug(invited_agent)
 
-    puts '----------------------'
-    puts current_user.inspect
-    puts params.inspect
-
-
-    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
-
-    call = @client.account.calls.create(
-      url: "http://my-med-labs-call-center.herokuapp.com/conference",
-      from: "client:#{current_user.slug}",
-      to: "client:#{invited_agent}"
-    )
+    push_over = PushOver.new()
+    push_over.invite_to_conference(invited_agent, current_user.slug)
 
     if number.present?
       @client.account.calls.list({status: "in-progress"}).each do |call|
@@ -172,12 +158,13 @@ class ConnectsController < ApplicationController
   end
 
   def conference
-    from_agent = params[:org] || params[:From]
-    to_agent = params[:dest] || params[:To]
+    from = params[:org] || params[:From]
+    to = params[:dest] || params[:To]
 
-    puts '///////////////////////'
-    puts current_user.inspect
-    puts params.inspect
+    from = from.gsub("client:", "")
+    to = to.gsub("client:", "")
+
+    room = params[:room] || "#{from}_c_#{to}"
 
     response = Twilio::TwiML::Response.new do |r|
       r.Dial do |d|
@@ -187,11 +174,19 @@ class ConnectsController < ApplicationController
       end
     end
 
+    push_over = PushOver.new()
+    push_over.invite_to_conference(from, to, room)
+
     #FIXME: this is stupid but I can't figure out how to store nouns
     response_text = response.text
-    response_text = response_text.gsub("</Conference>", "#{from_agent}_conference_#{to_agent}</Conference>")
+    response_text = response_text.gsub("</Conference>", "#{room}</Conference>")
 
+    puts '*****************'
     puts response_text.inspect
+    puts "to #{to.inspect}"
+    puts "from #{from.inspect}"
+    puts "room #{room}"
+    puts '*****************'
 
     render text: response_text
   end
@@ -214,23 +209,31 @@ class ConnectsController < ApplicationController
 
     @client.account.conferences.list({status: "in-progress"}).each do |conference|
       puts "Conference #{conference.status} named #{conference.friendly_name}:#{conference.sid}".blue
+      conference.participants.list.each do |participant|
+        puts "Conference #{conference.status} named #{conference.friendly_name}:#{conference.sid} with participant #{participant.call_sid}".red
+      end
     end
 
     @client.account.conferences.list({status: "init"}).each do |conference|
-      puts "Conference #{conference.status} named #{conference.friendly_name}:#{conference.sid}".red
-    end
-
-    conference = @client.account.conferences.list({status: "in-progress"}).first
-
-    if conference.present?
+      puts "Conference #{conference.status} named #{conference.friendly_name}:#{conference.sid}".blue
       conference.participants.list.each do |participant|
-        puts "Conference #{conference.status} named #{conference.friendly_name}:#{conference.sid} with participant #{participant.call_sid}".blue
+        puts "Conference #{conference.status} named #{conference.friendly_name}:#{conference.sid} with participant #{participant.call_sid}".red
       end
     end
+
     render nothing: true
   end
 
   private
+
+  def print_stuff
+    puts '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+    puts "action #{params[:action].inspect}"
+    puts "current_user #{current_user.inspect}"
+    puts "user_signed_in #{user_signed_in?.inspect}"
+    puts "params #{params.inspect}"
+    puts '^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^'
+  end
 
   def check_logged_in_user
     unless current_user.present?

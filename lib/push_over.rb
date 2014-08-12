@@ -2,82 +2,125 @@ require "net/https"
 
 class PushOver
 
-  def initialize(options = {})
-    @user = options[:user]
-    @from = options[:from]
+  def initialize()
   end
 
-  def prepare_call
-    if still_ringing?
+  # system received call, notifying all users
+  #  from is always just number
+  def notify_all_agents_of_call(from)
+    if still_ringing?(from)
       # dial all on_call users
       User.all.each do |agent|
         if agent.on_call?
-          if agent.devices.first
-            send_ping(agent, agent.devices.first)
-          end
-          dial_user(agent)
+          dial_user(from, agent, {send_ping: true})
         end
       end
     end
   end
 
-  def dial_user(agent = nil)
-    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
-    recipient = agent || @user
+  # call to user from twilio and push_over
+  #  from is string (could be number or twilio client slug)
+  #  agent is always a user object, recipient of the call
+  #  options hash
+  #    send_ping - whether to send notification through push over
+  #    room - specify the conference room the user will be redirected to
+  def dial_user(from, agent, options = {})
+    send_ping = options.delete(:send_ping)
+    room = options.delete(:room)
+    action = options.delete(:action) || 'queue'
+    skip_ping_check = options.delete(:skip_ping_check)
 
-    if still_ringing?
-      @client.account.calls.create(
-        url: "http://my-med-labs-call-center.herokuapp.com/queue?user_email=#{recipient.email}&user_token=#{recipient.authentication_token}",
-        from: @from,
-        to: "client:#{recipient.slug}"
+    client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+
+    unless from =~ /\d/
+      from = "client:#{from}"
+    end
+
+    if skip_ping_check || still_ringing?(from)
+      # compose the url to send request to
+      url = "http://my-med-labs-call-center.herokuapp.com/#{action}"
+      url_params = "?user_email=#{agent.email}&user_token=#{agent.authentication_token}"
+      url_params = "#{url_params}&from=#{from}" if from
+
+      if room
+        url_params = "#{url_params}&room=#{room}"
+        if conference_in_progress?(room)
+          url_params = "#{url_params}&conf_response=true"
+        end
+      end
+
+      puts 'new sending request'
+      puts "#{url}#{url_params}".inspect
+
+      # dial twilio agent
+      client.account.calls.create(
+        url: "#{url}#{url_params}",
+        from: from,
+        to: "client:#{agent.slug}"
       )
+
+      # send notification to device if it's known
+      if send_ping && agent.devices.first
+        send_push_notification(from, agent, agent.devices.first, "http://my-med-labs-call-center.herokuapp.com/connects#{url_params}")
+      end
     end
   end
 
-  def still_ringing?
-    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+  # send invite from FROM to TO for conference
+  #  from is the twilio client id
+  #  to is the twilio client id
+  def invite_to_conference(from, to, room = nil)
+    puts "send invite from #{from} to #{to} for room #{room}".red_on_yellow
+    agent = User.find_by_slug(to)
 
-    @client.account.calls.list({
-      status: "in-progress",
-      from: @from,
-      to: CALLER_ID,
-      direction: "inbound"}).present?
+    dial_user(from, agent, {room: room, action: 'conference', send_ping: true, skip_ping_check: true})
   end
 
-  def send_ping(agent, device)
-    url = URI.parse("https://api.pushover.net/1/messages.json")
-    req = Net::HTTP::Post.new(url.path)
+  def send_push_notification(from, agent, device, url)
+    message_json = URI.parse("https://api.pushover.net/1/messages.json")
+    req = Net::HTTP::Post.new(message_json.path)
     req.set_form_data({
       token: API_TOKEN,
       user: USER_KEY,
-      message: "Incoming call from #{@from}",
+      message: "Incoming call from #{from}",
       title: "Incoming call",
       device: device.device_id,
       # add redirection url
-      url: "http://my-med-labs-call-center.herokuapp.com/connects?user_email=#{agent.email}&user_token=#{agent.authentication_token}&from=#{@from}"
+      url: url
     })
-    res = Net::HTTP.new(url.host, url.port)
+    res = Net::HTTP.new(message_json.host, message_json.port)
     res.use_ssl = true
     res.verify_mode = OpenSSL::SSL::VERIFY_PEER
     res.start {|http| http.request(req) }
   end
 
-  def invite_to_conference(invited_agent, from, room = nil)
-    agent = User.find_by_slug(invited_agent)
+  # check if caller phone is still ringing
+  def still_ringing?(from)
+    client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
 
-    url = "http://my-med-labs-call-center.herokuapp.com/conference?user_email=#{agent.email}&user_token=#{agent.authentication_token}"
-    url = "#{url}&room=#{room}" if room
-
-    @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
-    @client.account.calls.create(
-      url: url,
-      from: "client:#{from}",
-      to: "client:#{invited_agent}"
-    )
-
+    client.account.calls.list({
+      status: "in-progress",
+      from: from,
+      to: CALLER_ID,
+      direction: "inbound"}).present?
   end
 
-  handle_asynchronously :prepare_call, run_at: Proc.new { 8.seconds.from_now }
+  # check if a conference by name is already started
+  def conference_in_progress?(room)
+    client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+
+    client.account.conferences.list({
+      status: "in-progress",
+      friendly_name: room}).each do |conf|
+      puts "conference #{conf.friendly_name} is in #{conf.status}"
+    end
+
+    client.account.conferences.list({
+      status: "in-progress",
+      friendly_name: room}).present?
+  end
+
+  handle_asynchronously :notify_all_agents_of_call, run_at: Proc.new { 8.seconds.from_now }
   handle_asynchronously :dial_user, run_at: Proc.new { 5.seconds.from_now }
   handle_asynchronously :invite_to_conference
 

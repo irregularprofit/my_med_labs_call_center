@@ -13,13 +13,48 @@ class ConnectsController < ApplicationController
     capability.allow_client_incoming current_user.slug
     token = capability.generate
 
+    # call from landline
     if params[:from]
-      number = params[:from].dup
-      number = number.strip
-      number = "+#{number}" unless number.start_with?("+")
+      from = params[:from].dup
+      # if from is number, then receiving call
+      if from =~ /\d/
+        from = from.strip
+        from = "+#{from}" unless from.start_with?("+")
 
-      push_over = PushOver.new({user: current_user, from: number})
-      push_over.dial_user()
+        push_over = PushOver.new
+        push_over.dial_user(from, current_user)
+      # if not number, then i's a conference call
+      else
+
+    from = from.gsub("client:", "")
+    to = current_user.slug
+    room = params[:room] || "#{from}_c_#{to}"
+
+    # create conference room
+    response = Twilio::TwiML::Response.new do |r|
+      r.Dial do |d|
+        d.Conference waitUrl: '', startConferenceOnEnter: true, endConferenceOnExit: true do |d|
+
+        end
+      end
+    end
+
+    # reply with conference request inviting the original sender
+      push_over = PushOver.new()
+      push_over.invite_to_conference(to, from, room)
+
+    #FIXME: this is stupid but I can't figure out how to store nouns
+    response_text = response.text
+    response_text = response_text.gsub("</Conference>", "#{room}</Conference>")
+
+    render text: response_text
+
+
+
+
+      end
+
+
     end
 
     render :index, locals: {token: token}
@@ -38,7 +73,7 @@ class ConnectsController < ApplicationController
       end
 
       response_text = response.text
-      # receive call, put caller on queue
+    # receive call, put caller on queue
     else
       response = Twilio::TwiML::Response.new do |r|
         r.Enqueue waitUrl: '/wait_url.xml', waitUrlMethod: 'GET' do |d|
@@ -60,8 +95,9 @@ class ConnectsController < ApplicationController
       r.Play 'https://www.dropbox.com/s/z97h9xl4eu47v6d/banana.mp3?dl=1'
     end
 
-    push_over = PushOver.new({from: params[:From]})
-    push_over.prepare_call()
+    # start dj worker to send notification and call all available users
+    push_over = PushOver.new()
+    push_over.notify_all_agents_of_call(params[:From])
 
     render text: response.text
   end
@@ -122,50 +158,56 @@ class ConnectsController < ApplicationController
   end
 
   def init_conference
-    invited_agent = params[:agent]
+    # new agent being invited to the call
+    to = params[:agent]
+    # the original caller
     number = params[:from]
-    agent = User.find_by_slug(invited_agent)
 
     push_over = PushOver.new()
-    push_over.invite_to_conference(invited_agent, current_user.slug)
+    push_over.invite_to_conference(current_user.slug, to)
 
     if number.present?
-      @client.account.calls.list({status: "in-progress"}).each do |call|
-        puts "Call #{call.status} from #{call.from} to #{call.to} as #{call.direction} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".red
+      @client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
+
+      @client.account.calls.list({
+        status: "in-progress"
+      }).each do |call|
+        puts "Current Call #{call.status} from #{call.from} to #{call.to} as #{call.direction} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".red
       end
 
       @client.account.calls.list({
-                                   from: number,
-                                   to: CALLER_ID,
-                                   status: "in-progress"
+        from: number,
+        to: CALLER_ID,
+        status: "in-progress"
       }).each do |call|
-        puts "Call #{call.status} from #{call.from} to #{call.to} as #{call.direction} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".blue
-        puts "Redirect call now".blue
+        puts "Redirecting Call #{call.status} from #{call.from} to #{call.to} as #{call.direction} starting at #{call.start_time} and ending at #{call.end_time} lasting #{call.duration}".blue
         call.update(
-          url: "http://my-med-labs-call-center.herokuapp.com/conference?org=client:#{current_user.slug}&dest=client:#{invited_agent}",
+          url: "http://my-med-labs-call-center.herokuapp.com/conference?from=client:#{current_user.slug}&to=client:#{to}",
           method: "POST"
         )
       end
 
-      call = @client.account.calls.create(
-        url: "http://my-med-labs-call-center.herokuapp.com/conference?org=client:#{current_user.slug}&dest=client:#{invited_agent}",
-        from: "client:#{invited_agent}",
-        to: "client:#{current_user.slug}"
-      )
+      # call = @client.account.calls.create(
+      #   url: "http://my-med-labs-call-center.herokuapp.com/conference?from=client:#{current_user.slug}&to=client:#{to}",
+      #   from: "client:#{to}",
+      #   to: "client:#{current_user.slug}"
+      # )
     end
 
     render nothing: true
   end
 
   def conference
-    from = params[:org] || params[:From]
-    to = params[:dest] || params[:To]
+    conf_response = params[:conf_response]
 
+    # TO had responded to conference request from FROM
+    from = params[:From]
+    to = params[:To]
     from = from.gsub("client:", "")
     to = to.gsub("client:", "")
-
     room = params[:room] || "#{from}_c_#{to}"
 
+    # create conference room
     response = Twilio::TwiML::Response.new do |r|
       r.Dial do |d|
         d.Conference waitUrl: '', startConferenceOnEnter: true, endConferenceOnExit: true do |d|
@@ -174,19 +216,15 @@ class ConnectsController < ApplicationController
       end
     end
 
-    push_over = PushOver.new()
-    push_over.invite_to_conference(from, to, room)
+    # reply with conference request inviting the original sender
+    unless conf_response
+      push_over = PushOver.new()
+      push_over.invite_to_conference(to, from, room)
+    end
 
     #FIXME: this is stupid but I can't figure out how to store nouns
     response_text = response.text
     response_text = response_text.gsub("</Conference>", "#{room}</Conference>")
-
-    puts '*****************'
-    puts response_text.inspect
-    puts "to #{to.inspect}"
-    puts "from #{from.inspect}"
-    puts "room #{room}"
-    puts '*****************'
 
     render text: response_text
   end

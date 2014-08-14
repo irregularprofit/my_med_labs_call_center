@@ -83,7 +83,7 @@ body {
   *display: inline;
 }
 
-#people {
+.people {
     bottom:0px;
     right: 0px;
     height:100%;
@@ -98,10 +98,10 @@ body {
     border:none !important;
     overflow: auto;
     overflow-x: hidden;
-  float:right;
+    float:right;
 }
 
-#people li {
+.people li {
     position:relative;
     width: 100%;
     display:block;
@@ -113,12 +113,12 @@ body {
     cursor: pointer;
 }
 
-#people li:HOVER {
+.people li:HOVER {
     color: #fff;
     background-color:#dd0000!important;
 }
 
-#people li:ACTIVE {
+.people li:ACTIVE {
     color: #fff;
     background-color:#C00 !important;
 }
@@ -137,10 +137,10 @@ http://github.com/necolas/css3-github-buttons
 .centered {
   text-align: center;
   margin-right: auto;
-  margin-left: auto; 
+  margin-left: auto;
 }
 
 
-.people-container {
+.agent-container {
   text-align: right;
 }

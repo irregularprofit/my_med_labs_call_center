@@ -1,5 +1,4 @@
-.span9
-
+.span6
   .buttons-container.centered.row-fluid
     %input#ToNumber{name: "ToNumber", placeholder: "Enter a phone number to call", type: "text"}/
 
@@ -22,9 +21,15 @@
 
   %div.agent_name= "Agent name: #{current_user.name}"
 
-.span3.people-container
-  %h3 Add Agent To Call
-  %ul.nav.nav-pills.nav-stacked#people
+.span3.agent-container
+  %h3 Agents Online
+  %ul.nav.nav-pills.nav-stacked#agents.people
+
+.span3.agent-container
+  %h3 All Agents
+  %ul.nav.nav-pills.nav-stacked#users.people
+    - @users.each do |user|
+      %li= user.name
 
 #dialog-confirm{class: 'incoming_call_notification', title: "Accept the call?"}
   %p
@@ -97,10 +102,10 @@
 
   Twilio.Device.presence(function (pres) {
     if (pres.available) {
-      if ($("ul#people").find("li#" + pres.from).size() == 0) {
+      if ($("ul#agents").find("li#" + pres.from).size() == 0) {
         $("<li>", {id: pres.from, text: pres.from}).click(function () {
           conference(pres.from, currentCalller);
-        }).prependTo("#people");
+        }).prependTo("#agents");
       }
     } else {
       $("#" + pres.from).remove();

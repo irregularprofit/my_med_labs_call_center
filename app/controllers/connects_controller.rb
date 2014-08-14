@@ -13,6 +13,8 @@ class ConnectsController < ApplicationController
     capability.allow_client_incoming current_user.slug
     token = capability.generate
 
+    @users = User.all.select{|x| x.on_call? }
+
     # call from landline
     if params[:from]
       from = params[:from].dup

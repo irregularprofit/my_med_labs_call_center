@@ -29,6 +29,7 @@ class PushOver
     room = options.delete(:room)
     action = options.delete(:action) || 'queue'
     skip_ping_check = options.delete(:skip_ping_check)
+    single_dir = options.delete(:single_dir)
 
     client = Twilio::REST::Client.new ACCOUNT_SID, AUTH_TOKEN
 
@@ -44,13 +45,12 @@ class PushOver
 
       if room
         url_params = "#{url_params}&room=#{room}"
-        if conference_in_progress?(room)
+        if single_dir
           url_params = "#{url_params}&conf_response=true"
         end
       end
 
-      puts 'new sending request'
-      puts "#{url}#{url_params}".inspect
+      puts "new sending request - #{url}#{url_params}".inspect
 
       # dial twilio agent
       client.account.calls.create(
@@ -69,11 +69,11 @@ class PushOver
   # send invite from FROM to TO for conference
   #  from is the twilio client id
   #  to is the twilio client id
-  def invite_to_conference(from, to, room = nil)
-    puts "send invite from #{from} to #{to} for room #{room}".red_on_yellow
+  def invite_to_conference(from, to, single_dir, room = nil)
+    puts "send invite from: #{from} to: #{to} for room: #{room}, will #{single_dir ? 'not dial' : 'dial'} in response".red_on_yellow
     agent = User.find_by_slug(to)
 
-    dial_user(from, agent, {room: room, action: 'conference', send_ping: true, skip_ping_check: true})
+    dial_user(from, agent, {room: room, action: 'conference', send_ping: true, skip_ping_check: true, single_dir: single_dir})
   end
 
   def send_push_notification(from, agent, device, url)
@@ -120,8 +120,8 @@ class PushOver
       friendly_name: room}).present?
   end
 
-  handle_asynchronously :notify_all_agents_of_call, run_at: Proc.new { 8.seconds.from_now }
-  handle_asynchronously :dial_user, run_at: Proc.new { 5.seconds.from_now }
+  handle_asynchronously :notify_all_agents_of_call, run_at: Proc.new { 4.seconds.from_now }
+  handle_asynchronously :dial_user, run_at: Proc.new { 2.seconds.from_now }
   handle_asynchronously :invite_to_conference
 
 end

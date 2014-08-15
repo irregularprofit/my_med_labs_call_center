@@ -1,7 +1,7 @@
 class Admin::LogsController < AdminsController
 
   def index
-    @logs = CallLog.order("created_at DESC").page(params[:page])
+    @logs = CallLog.order("start_time DESC").page(params[:page] || 1).per(20)
   end
 
 end

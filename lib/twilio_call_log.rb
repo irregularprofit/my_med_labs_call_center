@@ -6,10 +6,9 @@ class TwilioCallLog
     query_condition.merge!({start_time: start_time}) if start_time.present?
 
     User.all.each do |user|
-      query_condition.merge!({to: "client:#{user.name}"})
-      client.account.calls.list(query_condition).each do |call|
+      client.account.calls.list(query_condition.merge({to: "client:#{user.slug}"})).each do |call|
         unless CallLog.exists?(sid: call.sid)
-          CallLog.create(
+          CallLog.create!(
             sid:        call.sid,
             user_id:    user.id,
             duration:   call.duration,
@@ -22,10 +21,9 @@ class TwilioCallLog
         end
       end
 
-      query_condition.merge!({from: "client:#{user.name}"})
-      client.account.calls.list(query_condition).each do |call|
+      client.account.calls.list(query_condition.merge({from: "client:#{user.slug}"})).each do |call|
         unless CallLog.exists?(sid: call.sid)
-          CallLog.create(
+          CallLog.create!(
             sid:        call.sid,
             user_id:    user.id,
             duration:   call.duration,

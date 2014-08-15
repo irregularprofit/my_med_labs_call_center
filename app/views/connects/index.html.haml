@@ -29,10 +29,7 @@
   %h3 All Agents
   %ul.nav.nav-pills.nav-stacked#users.people
     - @users.each do |user|
-      %li= user.name
-
-#dialog-confirm{class: 'incoming_call_notification', title: "Accept the call?"}
-  %p
+      %li{rel: user.slug}= user.name
 
 :javascript
   var callLength;
@@ -73,11 +70,12 @@
         message = "Incoming conference request from " + conn.parameters.From + " accept?";
       }
 
-      $(".incoming_call_notification").find('p').html(message);
+      var customModal = $('<div class="incoming_call" id="dialog-confirm" title="Accept the call?"><p></p></div>');
+      customModal.find('p').html(message);
 
       var functional_id = ("dialog-confirm" + conn.parameters.From).replace(" ", "-");
 
-      $(".incoming_call_notification").clone().dialog({
+      customModal.clone().dialog({
         resizable: true,
         modal: true,
         buttons: {
@@ -103,13 +101,17 @@
   Twilio.Device.presence(function (pres) {
     if (pres.available) {
       if ($("ul#agents").find("li#" + pres.from).size() == 0) {
-        $("<li>", {id: pres.from, text: pres.from}).click(function () {
+        $("<li>", {rel: pres.from, text: pres.from}).click(function () {
           conference(pres.from, currentCalller);
         }).prependTo("#agents");
       }
     } else {
       $("#" + pres.from).remove();
     }
+  });
+
+  $("ul#users li").click(function () {
+    conference($(this).attr('rel'), currentCalller);
   });
 
   function show_call_end_status(conn) {

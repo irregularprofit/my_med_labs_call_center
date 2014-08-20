@@ -6,10 +6,10 @@
       dial
 
   .buttons-container.centered.row-fluid
-    %button{onclick: "check_rooms();", class: "btn btn-large btn-success"}
-      check
     %button{onclick: "hangup();", class: "btn btn-large btn-danger"}
       Hangup
+    %button{onclick: "check_rooms();", class: "btn btn-large btn-success"}
+      check
     %button{onclick: "check_logs();", class: "btn btn-large"}
       Logs
   .clearfix
@@ -35,10 +35,18 @@
   var callLength;
   var currentCalller;
 
-  Twilio.Device.setup("#{token}", {debug: true});
+  try {
+    Twilio.Device.setup("#{token}", {debug: true});
 
-  Twilio.Device.ready(function (device) {
-    $("#log").text("Ready");
+    Twilio.Device.ready(function() {
+      $("#log").text("Ready");
+    });
+  } catch (err) {
+    alert("Adobe Flash is required to use Twilio Client.");
+  }
+
+  Twilio.Device.offline(function() {
+    Twilio.Device.setup("#{token}", {debug: true});
   });
 
   Twilio.Device.error(function (error) {

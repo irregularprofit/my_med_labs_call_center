@@ -120,8 +120,8 @@ class PushOver
       friendly_name: room}).present?
   end
 
-  handle_asynchronously :notify_all_agents_of_call, run_at: Proc.new { 4.seconds.from_now }
-  handle_asynchronously :dial_user, run_at: Proc.new { 2.seconds.from_now }
+  handle_asynchronously :notify_all_agents_of_call, run_at: Proc.new { 3.seconds.from_now }
+  handle_asynchronously :dial_user, run_at: Proc.new { 3.seconds.from_now }
   handle_asynchronously :invite_to_conference
 
 end

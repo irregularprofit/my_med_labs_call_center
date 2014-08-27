@@ -1,6 +1,14 @@
 MyMedLabsCallCenter::Application.routes.draw do
-  devise_for :users, controllers: { sessions: "sessions" }
+  devise_for :users
 
+  devise_scope :user do
+    namespace :api do
+
+      post "users/sign_in" => 'sessions#create'
+      delete "users/sign_out" => 'sessions#destroy'
+
+    end
+  end
   namespace :admin do
     resources :users
     resources :schedules

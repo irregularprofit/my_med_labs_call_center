@@ -1,7 +1,7 @@
 class ConnectsController < ApplicationController
   layout "connect"
 
-  acts_as_token_authentication_handler_for User, only: [:index, :queue, :conference]
+  acts_as_token_authentication_handler_for User, only: [:index, :queue, :conference, :init_conference]
   before_filter :print_stuff
   skip_before_filter :verify_authenticity_token
 
@@ -142,7 +142,7 @@ class ConnectsController < ApplicationController
     room = "#{current_user.slug}_c_#{to}"
 
     push_over = PushOver.new()
-    push_over.invite_to_conference(current_user.slug, to, true, room)
+    push_over.invite_to_conference(current_user.slug, to, false, room)
 
     if number.present?
       agent = User.find_by_slug(to)

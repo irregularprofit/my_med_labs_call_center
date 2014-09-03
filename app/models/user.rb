@@ -71,6 +71,14 @@ class User < ActiveRecord::Base
     capability.generate
   end
 
+  def as_json(options = {})
+    {
+      id: self.id,
+      name: self.name,
+      slug: self.slug
+    }
+  end
+
   private
 
   def underscore_paramaterize_slug

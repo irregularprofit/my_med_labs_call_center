@@ -8,6 +8,7 @@ MyMedLabsCallCenter::Application.routes.draw do
       delete "users/sign_out" => 'sessions#destroy'
       get "users/get_token" => 'sessions#get_token'
       get "users/user_on_call" => 'sessions#user_on_call'
+      get "users/get_active_agents" => 'sessions#get_active_agents'
 
     end
   end

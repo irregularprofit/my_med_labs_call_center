@@ -1,11 +1,17 @@
 class Api::SessionsController < Devise::SessionsController
-  before_filter :find_user, only: [:get_token, :user_on_call]
+  acts_as_token_authentication_handler_for User, only: [:get_token, :user_on_call, :get_active_agents]
 
   def create
     self.resource = warden.authenticate(auth_options)
     if resource
       sign_in(resource_name, resource)
-      return render json: {success: true, slug: resource.slug, name: resource.name, token: resource.get_capability_token}
+      return render json: {
+        success: true,
+        slug: resource.slug,
+        name: resource.name,
+        token: resource.get_capability_token,
+        auth_token: resource.authentication_token
+      }
     else
       return render json: {success: false}
     end
@@ -18,20 +24,25 @@ class Api::SessionsController < Devise::SessionsController
   end
 
   def get_token
-    if @user
-      return render json: {success: true, slug: @user.slug, name: @user.name, token: @user.get_capability_token}
+    if current_user
+      return render json: {
+        success: true,
+        slug: current_user.slug,
+        name: current_user.name,
+        token: current_user.get_capability_token,
+        auth_token: current_user.authentication_token
+      }
     else
       return render json: {success: false, message: "User not found"}
     end
   end
 
   def user_on_call
-    return render json: {success: (@user && @user.on_call?)}
+    return render json: {success: (current_user && current_user.on_call?)}
   end
 
-  private
-
-  def find_user
-    @user = User.find_by_slug(params[:slug])
+  def get_active_agents
+    users = User.where("id != ?", current_user.id).all.select{|x| x.on_call? }
+    return render json: {success: true, users: users.as_json}
   end
 end

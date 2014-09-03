@@ -47,8 +47,6 @@ class User < ActiveRecord::Base
   def on_call?
     return true # always on for testing
 
-
-
     schedule = self.schedule
     # user is not on call if there is no schedule, or if schedule is disabled
     return false if schedule.nil? || !schedule.enabled?
@@ -62,6 +60,15 @@ class User < ActiveRecord::Base
       time.hour < schedule.end_hour &&
       time.min > schedule.start_min &&
       time.min < schedule.end_min
+  end
+
+  def get_capability_token
+    capability = Twilio::Util::Capability.new ACCOUNT_SID, AUTH_TOKEN
+
+    # Create an application sid at twilio.com/user/account/apps and use it here
+    capability.allow_client_outgoing APP_TOKEN
+    capability.allow_client_incoming self.slug
+    capability.generate
   end
 
   private

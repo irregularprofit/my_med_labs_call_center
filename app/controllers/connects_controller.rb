@@ -6,12 +6,7 @@ class ConnectsController < ApplicationController
   skip_before_filter :verify_authenticity_token
 
   def index
-    capability = Twilio::Util::Capability.new ACCOUNT_SID, AUTH_TOKEN
-
-    # Create an application sid at twilio.com/user/account/apps and use it here
-    capability.allow_client_outgoing APP_TOKEN
-    capability.allow_client_incoming current_user.slug
-    token = capability.generate
+    token = current_user.get_capability_token
 
     @users = User.where("id != ?", current_user.id).all.select{|x| x.on_call? }
 
